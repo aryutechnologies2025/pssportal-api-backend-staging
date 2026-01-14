@@ -24,7 +24,7 @@ pipeline {
             steps {
                 sh '''
                   cd ${COMPOSE_DIR}
-                  docker compose build ${SERVICE_NAME}
+                  docker-compose build ${SERVICE_NAME}
                 '''
             }
         }
@@ -35,10 +35,10 @@ pipeline {
                   cd ${COMPOSE_DIR}
 
                   echo "Stopping old container (if running)"
-                  docker compose stop ${SERVICE_NAME} || true
+                  docker-compose stop ${SERVICE_NAME} || true
 
                   echo "Starting updated container"
-                  docker compose up -d ${SERVICE_NAME}
+                  docker-compose up -d ${SERVICE_NAME}
                 '''
             }
         }
@@ -49,13 +49,13 @@ pipeline {
                   cd ${COMPOSE_DIR}
 
                   echo "Running migrations"
-                  docker compose exec -T ${SERVICE_NAME} php artisan migrate --force
+                  docker-compose exec -T ${SERVICE_NAME} php artisan migrate --force
 
                   echo "Clearing caches"
-                  docker compose exec -T ${SERVICE_NAME} php artisan config:clear
-                  docker compose exec -T ${SERVICE_NAME} php artisan cache:clear
-                  docker compose exec -T ${SERVICE_NAME} php artisan route:clear
-                  docker compose exec -T ${SERVICE_NAME} php artisan view:clear
+                  docker-compose exec -T ${SERVICE_NAME} php artisan config:clear
+                  docker-compose exec -T ${SERVICE_NAME} php artisan cache:clear
+                  docker-compose exec -T ${SERVICE_NAME} php artisan route:clear
+                  docker-compose exec -T ${SERVICE_NAME} php artisan view:clear
                 '''
             }
         }
@@ -80,7 +80,7 @@ pipeline {
 
             sh '''
               cd ${COMPOSE_DIR}
-              docker compose up -d ${SERVICE_NAME}
+              docker-compose up -d ${SERVICE_NAME}
             '''
         }
     }
