@@ -2,9 +2,9 @@ pipeline {
     agent any
 
     environment {
-        APP_NAME = "portal-api"
         COMPOSE_DIR = "/var/www/staging"
-        SERVICE_NAME = "portal-api"
+        SERVICE     = "portal-api"
+        CONTAINER   = "staging_api"
     }
 
     options {
@@ -24,21 +24,24 @@ pipeline {
             steps {
                 sh '''
                   cd ${COMPOSE_DIR}
-                  docker-compose build ${SERVICE_NAME}
+                  docker-compose build ${SERVICE}
                 '''
             }
         }
 
-        stage('Deploy (Safe)') {
+        stage('Deploy (Safe & Correct)') {
             steps {
                 sh '''
                   cd ${COMPOSE_DIR}
 
-                  echo "Stopping old container (if running)"
-                  docker-compose stop ${SERVICE_NAME} || true
+                  echo "Stopping running container if exists"
+                  docker stop ${CONTAINER} || true
 
-                  echo "Starting updated container"
-                  docker-compose up -d ${SERVICE_NAME}
+                  echo "Removing container if exists"
+                  docker rm ${CONTAINER} || true
+
+                  echo "Starting new container via compose"
+                  docker-compose up -d ${SERVICE}
                 '''
             }
         }
@@ -48,14 +51,11 @@ pipeline {
                 sh '''
                   cd ${COMPOSE_DIR}
 
-                  echo "Running migrations"
-                  docker-compose exec -T ${SERVICE_NAME} php artisan migrate --force
-
-                  echo "Clearing caches"
-                  docker-compose exec -T ${SERVICE_NAME} php artisan config:clear
-                  docker-compose exec -T ${SERVICE_NAME} php artisan cache:clear
-                  docker-compose exec -T ${SERVICE_NAME} php artisan route:clear
-                  docker-compose exec -T ${SERVICE_NAME} php artisan view:clear
+                  docker-compose exec -T ${SERVICE} php artisan migrate --force
+                  docker-compose exec -T ${SERVICE} php artisan config:clear
+                  docker-compose exec -T ${SERVICE} php artisan cache:clear
+                  docker-compose exec -T ${SERVICE} php artisan route:clear
+                  docker-compose exec -T ${SERVICE} php artisan view:clear
                 '''
             }
         }
@@ -63,7 +63,6 @@ pipeline {
         stage('Health Check') {
             steps {
                 sh '''
-                  echo "Checking API health"
                   curl -f https://portalapi-staging.pssagencies.com || exit 1
                 '''
             }
@@ -76,12 +75,7 @@ pipeline {
         }
 
         failure {
-            echo "❌ DEPLOY FAILED — Rolling back"
-
-            sh '''
-              cd ${COMPOSE_DIR}
-              docker-compose up -d ${SERVICE_NAME}
-            '''
+            echo "❌ DEPLOY FAILED — API container left untouched if running"
         }
     }
 }
