@@ -10,14 +10,6 @@ pipeline {
 
     stages {
 
-        stage('Checkout') {
-            steps {
-                git branch: 'main',
-                    credentialsId: 'github-creds',
-                    url: 'https://github.com/<org>/pssportal-api-backend.git'
-            }
-        }
-
         stage('Build Image') {
             steps {
                 sh """
