@@ -22,12 +22,15 @@ use App\Http\Controllers\PssWorkShiftController;
 use App\Http\Controllers\SettingController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ActivitiesController;
+use App\Http\Controllers\AssetCategoryController;
+use App\Http\Controllers\AssetController;
+use App\Http\Controllers\AssetSubCategoryController;
 use App\Http\Controllers\PssCompanyController;
 use App\Http\Controllers\LeadManagementController;
 use App\Http\Controllers\AttendanceReportController;
-
-// hbjb
-// test
+use App\Http\Controllers\WorkReportController;
+use App\Http\Controllers\HolidayController;
+use App\Http\Controllers\FinanceController;
 
 /*
 |--------------------------------------------------------------------------
@@ -65,7 +68,7 @@ Route::middleware('static.auth')->group(function () {
         Route::post('/update/{id}', [RemarkController::class, 'update']);        // update
         Route::delete('/delete/{id}', [RemarkController::class, 'destroy']);    // delete
     });
-    
+
     //role
     Route::controller(RoleController::class)->group(function () {
         Route::prefix('role')->group(function () {
@@ -143,7 +146,7 @@ Route::middleware('static.auth')->group(function () {
     //contact
     Route::prefix('contact')->group(function () {
         Route::post('/create', [ContactController::class, 'store']);
-        Route::get('/list',  [ContactController::class, 'index']);
+        Route::get('/list', [ContactController::class, 'index']);
         Route::delete('/delete/{id}', [ContactController::class, 'destroy']);
         Route::get('/edit/{id}', [ContactController::class, 'show']);
     });
@@ -156,6 +159,7 @@ Route::middleware('static.auth')->group(function () {
         Route::post('/update/{id}', [AttendanceController::class, 'update']);
         Route::delete('/delete/{id}', [AttendanceController::class, 'destroy']);
         Route::get('company/{company_id}/employees', [AttendanceController::class, 'getCompanyEmployees']);
+        Route::post('/import', [AttendanceController::class, 'import']);
     });
 
     //department
@@ -224,6 +228,62 @@ Route::middleware('static.auth')->group(function () {
     Route::controller(AttendanceReportController::class)->group(function () {
         Route::prefix('attendance-report')->group(function () {
             Route::get('/', 'index');
+            Route::get('/attendance', 'daywiseAttendanceReport');
+        });
+    });
+
+    // Asset Category
+    Route::controller(AssetCategoryController::class)->group(function () {
+        Route::prefix('asset-category')->group(function () {
+            Route::get('/', 'index');
+            Route::get('/edit/{id}', 'show');
+            Route::post('/create', 'store');
+            Route::post('/update/{id}', 'update');
+            Route::delete('/delete/{id}', 'destroy');
+        });
+    });
+
+    // Asset Sub Category
+    Route::controller(AssetSubCategoryController::class)->group(function () {
+        Route::prefix('asset-sub-category')->group(function () {
+            Route::get('/', 'index');
+            Route::get('/edit/{id}', 'show');
+            Route::post('/create', 'store');
+            Route::post('/update/{id}', 'update');
+            Route::delete('/delete/{id}', 'destroy');
+        });
+    });
+
+    // Assets
+    Route::controller(AssetController::class)->group(function () {
+        Route::prefix('assets')->group(function () {
+            Route::get('/', 'index');
+            Route::get('/edit/{id}', 'show');
+            Route::post('/create', 'store');
+            Route::post('/update/{id}', 'update');
+            Route::delete('/delete/{id}', 'destroy');
+        });
+    });
+
+    // Work Reports
+    Route::controller(WorkReportController::class)->group(function() {
+        Route::prefix('work-reports')->group(function() {
+            Route::get('/', 'index');
+            Route::get('/filter', 'filterByDate');
+            Route::get('/edit/{id}', 'show');
+            Route::post('/create', 'store');
+            Route::put('/update/{id}', 'update');
+        });
+    });
+
+    // Holidays 
+    Route::controller(HolidayController::class)->group(function() {
+        Route::prefix('holiday')->group(function() {
+            Route::get('/', 'index');
+            Route::get('/edit/{id}', 'show');
+            Route::post('/create', 'store');
+            Route::put('/update/{id}', 'update');
+            Route::delete('/delete/{id}', 'destroy');
         });
     });
 });
@@ -251,5 +311,14 @@ Route::prefix('employee')->group(function () {
         });
 
         Route::get('activity', [ActivitiesController::class, 'empActivities']);
+
+        // Finance
+        Route::controller(FinanceController::class)->group(function () {
+            Route::prefix('finance')->group(function () {
+                Route::get('/', 'index');
+                Route::post('/create', 'store');
+                Route::post('/update/{id}', 'update');
+            });
+        });
     });
 });

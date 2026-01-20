@@ -8,6 +8,7 @@ use App\Models\PssEmployeeAttendance;
 use Carbon\Carbon;
 use App\Models\Activities;
 use App\Models\PssWorkShift;
+use Illuminate\Support\Str;
 
 class PssEmployeeAttendanceController extends Controller
 {
@@ -169,45 +170,45 @@ class PssEmployeeAttendanceController extends Controller
         $reason     = $request->reason;
         $shiftId    = $request->shift;
 
-        // 🔹 Fetch shift
-        $shift = PssWorkShift::where('id', $shiftId)
-            ->where('is_deleted', 0)
-            ->first();
+        // // 🔹 Fetch shift
+        // $shift = PssWorkShift::where('id', $shiftId)
+        //     ->where('is_deleted', 0)
+        //     ->first();
 
-        if (!$shift) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Invalid shift selected'
-            ], 422);
-        }
+        // if (!$shift) {
+        //     return response()->json([
+        //         'success' => false,
+        //         'message' => 'Invalid shift selected'
+        //     ], 422);
+        // }
 
-        /**
-         * ✅ SHIFT TIME CHECK (LOGIN ONLY)
-         */
-        if ($reason === 'login') {
+        // /**
+        //  * ✅ SHIFT TIME CHECK (LOGIN ONLY)
+        //  */
+        // if ($reason === 'login') {
 
-            $shiftStart = Carbon::createFromFormat('H:i', $shift->start_time);
-            $shiftEnd   = Carbon::createFromFormat('H:i', $shift->end_time);
-            $current    = Carbon::createFromFormat('H:i:s', $nowTime);
+        //     $shiftStart = Carbon::createFromFormat('H:i', $shift->start_time);
+        //     $shiftEnd   = Carbon::createFromFormat('H:i', $shift->end_time);
+        //     $current    = Carbon::createFromFormat('H:i:s', $nowTime);
 
-            $allowed = false;
+        //     $allowed = false;
 
-            // 🌙 Night shift
-            if ($shiftStart->gt($shiftEnd)) {
-                $allowed = $current->gte($shiftStart) || $current->lte($shiftEnd);
-            }
-            // 🌞 Day shift
-            else {
-                $allowed = $current->betweenIncluded($shiftStart, $shiftEnd);
-            }
+        //     // 🌙 Night shift
+        //     if ($shiftStart->gt($shiftEnd)) {
+        //         $allowed = $current->gte($shiftStart) || $current->lte($shiftEnd);
+        //     }
+        //     // 🌞 Day shift
+        //     else {
+        //         $allowed = $current->betweenIncluded($shiftStart, $shiftEnd);
+        //     }
 
-            if (!$allowed) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'This time is not allowed to login for this shift'
-                ], 422);
-            }
-        }
+        //     if (!$allowed) {
+        //         return response()->json([
+        //             'success' => false,
+        //             'message' => 'This time is not allowed to login for this shift'
+        //         ], 422);
+        //     }
+        // }
 
         // 🔹 Get last attendance
         $lastEntry = PssEmployeeAttendance::where('employee_id', $employeeId)
@@ -270,6 +271,29 @@ class PssEmployeeAttendanceController extends Controller
             'type'       => 'pss_emp'
         ]);
 
+        /* ============================
+            PROFILE PHOTO UPLOAD
+        ============================ */
+
+        // $photoPath = null;
+
+        // if ($request->hasFile('profile_picture')) {
+
+        //     $photo = $request->file('profile_picture'); // ✅ UploadedFile
+
+        //     $photoDir = public_path('uploads/attendance/selfies');
+        //     if (!file_exists($photoDir)) {
+        //         mkdir($photoDir, 0755, true);
+        //     }
+
+        //     $photoName = now()->format('YmdHis') . '_' . rand(10000, 99999) . '.' .
+        //         $photo->getClientOriginalExtension();
+
+        //     $photo->move($photoDir, $photoName);
+
+        //     $photoPath = 'uploads/attendance/selfies/' . $photoName;
+        // }
+
         // 🔹 Save attendance
         PssEmployeeAttendance::create([
             'employee_id'     => $employeeId,
@@ -277,6 +301,9 @@ class PssEmployeeAttendanceController extends Controller
             'attendance_time' => $nowTime,
             'shift_id'        => $shiftId,
             'reason'          => $reason,
+            // 'photo'           => $photoPath,
+            // 'latitude'        => $request->latitude,
+            // 'longitude'       => $request->longitude,
         ]);
 
         return response()->json([

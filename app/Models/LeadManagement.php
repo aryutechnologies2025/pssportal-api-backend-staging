@@ -35,7 +35,8 @@ class LeadManagement extends Model
         'status',
         'created_by',
         'updated_by',
-        'is_deleted'
+        'is_deleted',
+        'age'
     ];
 
     public function notes()

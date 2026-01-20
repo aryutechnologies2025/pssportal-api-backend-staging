@@ -8,11 +8,13 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 use App\Models\Department;
 use App\Models\PssCompany;
+use Illuminate\Support\Facades\Hash;
 
 class RoleController extends Controller
 {
     public function list(Request $request)
     {
+        // dd(Hash::make('PSStamil@8687'));
         // $roles = Role::with('department')
         //     ->whereNotNull('department_id')
         //     ->where('is_deleted', '0')

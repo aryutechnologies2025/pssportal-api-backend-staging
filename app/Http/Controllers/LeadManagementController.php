@@ -37,12 +37,20 @@ class LeadManagementController extends Controller
         );
         $data = $query->latest()->get();
 
-        $gender = LeadManagement::where('is_deleted', '0')
-            ->whereNotNull('gender')
-            ->pluck('gender')
+        $age = LeadManagement::where('is_deleted', '0')
+            ->whereNotNull('age')
+            ->pluck('age')
             ->unique()
             ->values()
             ->toArray();
+
+        $cities = LeadManagement::where('is_deleted', '0')
+            ->whereNotNull('city')
+            ->pluck('city')
+            ->unique()
+            ->values()
+            ->toArray();
+
         $platforms = LeadManagement::where('is_deleted', '0')
             ->select('platform')
             ->distinct()
@@ -63,7 +71,8 @@ class LeadManagementController extends Controller
             'success' => true,
             'data'    => $data,
             'platforms' => $platforms,
-            'gender' => $gender
+            'age' => $age,
+            'cities' => $cities
         ]);
     }
 
@@ -89,9 +98,19 @@ class LeadManagementController extends Controller
         }
 
         $data = $request->all();
+        $date_of_birth  = $this->parseDate($data['date_of_birth'] ?? null);
+        $age = null;
 
-        // ✅ Default lead status
+        if ($date_of_birth) {
+            try {
+                $age = Carbon::parse($date_of_birth)->age; // auto calculates from today
+            } catch (\Exception $e) {
+                $age = null;
+            }
+        }
         $data['phone']        = $phone;
+        $data['age']          = $age;
+        $data['platform']     = 'portal'; // ✅ static
         $data['lead_status'] = $data['lead_status'] ?? 'open';
         $data['is_organic'] = $data['is_organic'];
         $data['created_time'] = date('Y-m-d H:i:s');
@@ -145,6 +164,17 @@ class LeadManagementController extends Controller
         }
 
         $data = $request->all();
+        $date_of_birth  = $this->parseDate($data['date_of_birth'] ?? null);
+        $age = null;
+
+        if ($date_of_birth) {
+            try {
+                $age = Carbon::parse($date_of_birth)->age; // auto calculates from today
+            } catch (\Exception $e) {
+                $age = null;
+            }
+        }
+        $data['age']          = $age;
         $data['updated_by'] = $request->updated_by ?? null;
 
         $lead->update($data);
@@ -255,6 +285,30 @@ class LeadManagementController extends Controller
 
             $createdTime = $this->parseDateTime($data['created_time'] ?? null);
 
+
+            // 🔹 Normalize gender
+            $rawGender = strtolower(trim($data['gender'] ?? ''));
+
+            if (in_array($rawGender, ['male', 'm'])) {
+                $gender = 'male';
+            } elseif (in_array($rawGender, ['female', 'f'])) {
+                $gender = 'female';
+            } else {
+                $gender = 'other';
+            }
+
+            $age = null;
+
+            if ($date_of_birth) {
+                try {
+                    $age = Carbon::parse($date_of_birth)->age; // auto calculates from today
+                } catch (\Exception $e) {
+                    $age = null;
+                }
+            }
+
+
+
             LeadManagement::create([
                 'lead_id'       => $data['id'] ?? null,
                 'created_time'  => $createdTime,
@@ -272,12 +326,13 @@ class LeadManagementController extends Controller
                 //     : null,
                 'platform'      => $data['platform'] ?? null,
                 'full_name'     => $data['full_name'] ?? null,
-                'gender'        => $data['gender'] ?? null,
+                'gender'        => $gender,
                 'phone'         => $phone,
                 'date_of_birth' => $date_of_birth ?? null,
                 'post_code'     => $data['post_code'] ?? null,
                 'city'          => $data['city'] ?? null,
                 'state'         => $data['state'] ?? null,
+                'age'           => $age,
                 'lead_status'   => 'open',
                 'status'        => 1,
                 'is_deleted'    => '0',
