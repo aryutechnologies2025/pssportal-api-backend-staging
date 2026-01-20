@@ -238,6 +238,7 @@ class JobFormController extends Controller
             'District',
             'Referred By',
             'Register On',
+            'Remarks'
         ]);
 
         foreach ($records as $index => $row) {
@@ -250,6 +251,7 @@ class JobFormController extends Controller
                 $row->district,
                 $row->reference,
                 optional($row->created_at)->format('d-m-Y'),
+                $row->remarks
             ]);
         }
 
