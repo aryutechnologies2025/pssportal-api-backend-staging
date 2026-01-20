@@ -58,6 +58,7 @@ Route::middleware('static.auth')->group(function () {
         Route::get('/list', 'index');
         Route::delete('/delete/{id}', 'destroy');
         Route::get('/show/{id}', 'show');
+        Route::get('/export', 'export');
     });
 
     //remarks
@@ -322,4 +323,3 @@ Route::prefix('employee')->group(function () {
         });
     });
 });
-//test
