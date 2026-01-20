@@ -429,7 +429,7 @@ class ContractEmployeeController extends Controller
 
             /* UNIQUE CHECK */
             $exists = ContractCanEmp::where('aadhar_number', $data['aadhar_number'])
-                // ->where('company_id', $request->company_id)
+                ->where('is_deleted', 0)
                 ->exists();
 
             if ($exists) {
