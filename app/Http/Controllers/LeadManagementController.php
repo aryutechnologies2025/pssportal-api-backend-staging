@@ -17,24 +17,36 @@ class LeadManagementController extends Controller
         $query = LeadManagement::where('is_deleted', '0');
 
         // Optional filters
+        // if ($request->filled('gender')) {
+        //     $query->where('gender', $request->lead_status);
+        // }
         if ($request->filled('gender')) {
-            $query->where('gender', $request->lead_status);
+        $query->where('gender', $request->gender);
         }
 
         if ($request->filled('platform')) {
             $query->where('platform', $request->platform);
         }
 
-        // ✅ Date range filter
-        $query->when(
-            $request->filled('from_date') && $request->filled('to_date'),
-            function ($q) use ($request) {
-                $from = Carbon::parse($request->from_date)->startOfDay();
-                $to   = Carbon::parse($request->to_date)->endOfDay();
+        // // ✅ Date range filter
+        // $query->when(
+        //     $request->filled('from_date') && $request->filled('to_date'),
+        //     function ($q) use ($request) {
+        //         $from = Carbon::parse($request->from_date)->startOfDay();
+        //         $to   = Carbon::parse($request->to_date)->endOfDay();
 
-                $q->whereBetween('created_at', [$from, $to]);
-            }
-        );
+        //         $q->whereBetween('created_at', [$from, $to]);
+        //     }
+        // );
+        $query->when(
+        $request->filled('from_date') && $request->filled('to_date'),
+        function ($q) use ($request) {
+        $q->whereBetween('created_at', [
+            Carbon::parse($request->from_date)->startOfDay(),
+            Carbon::parse($request->to_date)->endOfDay(),
+            ]);
+        }
+    );
         $data = $query->latest()->get();
 
         $age = LeadManagement::where('is_deleted', '0')
