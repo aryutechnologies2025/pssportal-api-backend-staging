@@ -25,7 +25,8 @@ class Company extends Model
         'role_id',
         'prefix',
         'company_emp_id',
-        'notes'
+        'notes',
+        'company_shift_id'
     ];
 
     public function contacts()

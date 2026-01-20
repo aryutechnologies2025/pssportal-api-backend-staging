@@ -81,17 +81,50 @@ class CompanyController extends Controller
 
         //shifts
 
+        // if (is_array($request->shiftdetails)) {
+        //     foreach ($request->shiftdetails as $shift) {
+        //         CompanyShifts::create([
+        //             'parent_id'   => $company->id,
+        //             'shift_name'        => $shift['shift_name'],
+        //             'start_time'        => $shift['start_time'] ?? null,
+        //             'end_time' => $shift['end_time'],
+        //             'created_by' => $request->created_by,
+        //             'company_shift_id' => 'PSSCC'.$company->id.'001'
+        //         ]);
+        //     }
+        // }
+
         if (is_array($request->shiftdetails)) {
+
             foreach ($request->shiftdetails as $shift) {
+
+                // 🔹 Get last shift for this company
+                $lastShift = CompanyShifts::where('parent_id', $company->id)
+                    ->orderBy('id', 'desc')
+                    ->first();
+
+                if ($lastShift && $lastShift->company_shift_id) {
+                    // Extract last 3 digits
+                    $lastNumber = (int) substr($lastShift->company_shift_id, -3);
+                    $nextNumber = str_pad($lastNumber + 1, 3, '0', STR_PAD_LEFT);
+                } else {
+                    // First shift for this company
+                    $nextNumber = '001';
+                }
+
+                $companyShiftId = 'PSSCC_' . $company->id . '_' . $nextNumber;
+
                 CompanyShifts::create([
-                    'parent_id'   => $company->id,
+                    'parent_id'         => $company->id,
                     'shift_name'        => $shift['shift_name'],
                     'start_time'        => $shift['start_time'] ?? null,
-                    'end_time' => $shift['end_time'],
-                    'created_by' => $request->created_by
+                    'end_time'          => $shift['end_time'],
+                    'created_by'        => $request->created_by,
+                    'company_shift_id'  => $companyShiftId,
                 ]);
             }
         }
+
 
         return response()->json([
             'success' => true,
@@ -213,19 +246,45 @@ class CompanyController extends Controller
 
 
         //shifts
-        CompanyShifts::where('parent_id', $id)
-            ->delete();
+        // CompanyShifts::where('parent_id', $id)
+        //     ->delete();
+        // if (is_array($request->shiftdetails)) {
+        //     foreach ($request->shiftdetails as $shift) {
+        //         CompanyShifts::create([
+        //             'parent_id'   => $company->id,
+        //             'shift_name'        => $shift['shift_name'],
+        //             'start_time'        => $shift['start_time'] ?? null,
+        //             'end_time' => $shift['end_time'],
+        //             'created_by' => $request->created_by
+        //         ]);
+        //     }
+        // }
+
+        // 🔹 Delete old shifts
+        CompanyShifts::where('parent_id', $id)->delete();
+
+        // 🔹 Re-create shifts with new sequential company_shift_id
         if (is_array($request->shiftdetails)) {
+
+            $counter = 1; // start from 001 for this company
+
             foreach ($request->shiftdetails as $shift) {
+
+                $companyShiftId = 'PSSCC_' . $company->id . '_' . str_pad($counter, 3, '0', STR_PAD_LEFT);
+
                 CompanyShifts::create([
-                    'parent_id'   => $company->id,
-                    'shift_name'        => $shift['shift_name'],
-                    'start_time'        => $shift['start_time'] ?? null,
-                    'end_time' => $shift['end_time'],
-                    'created_by' => $request->created_by
+                    'parent_id'        => $company->id,
+                    'shift_name'       => $shift['shift_name'],
+                    'start_time'       => $shift['start_time'] ?? null,
+                    'end_time'         => $shift['end_time'],
+                    'created_by'       => $request->created_by,
+                    'company_shift_id' => $companyShiftId,
                 ]);
+
+                $counter++;
             }
         }
+
 
         return response()->json([
             'success' => true,

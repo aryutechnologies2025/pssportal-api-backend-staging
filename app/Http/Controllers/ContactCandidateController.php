@@ -19,6 +19,10 @@ class ContactCandidateController extends Controller
 
     public function store(Request $request)
     {
+
+        // dd($request->all());
+        // dd($request->all(), $request->file('documents'));
+
         $validator = Validator::make($request->all(), [
             'phone_number'  => 'required|digits_between:10,12',
             'aadhar_number' => 'required|digits:12|unique:contract_employees,aadhar_number',
@@ -40,7 +44,7 @@ class ContactCandidateController extends Controller
 
         /* ============================
        PROFILE PHOTO UPLOAD
-    ============================ */
+        ============================ */
         $photoDir = public_path('uploads/contract_candidate/profile');
         if (!file_exists($photoDir)) {
             mkdir($photoDir, 0755, true);
@@ -59,7 +63,7 @@ class ContactCandidateController extends Controller
 
         /* ============================
        MULTIPLE DOCUMENT UPLOAD
-    ============================ */
+     ============================ */
         if ($request->hasFile('documents')) {
 
             $docDir = public_path('uploads/contract_candidate/documents');
@@ -167,7 +171,7 @@ class ContactCandidateController extends Controller
 
     public function show($id)
     {
-        $emp = ContractEmployee::where('id', $id)
+        $emp = ContractEmployee::with('documents')->where('id', $id)
             ->where('is_deleted', 0)
             ->firstOrFail();
 
@@ -230,7 +234,7 @@ class ContactCandidateController extends Controller
 
         /* ============================
        UPDATE PROFILE PHOTO
-    ============================ */
+     ============================ */
         $photoDir = public_path('uploads/contract_candidate/profile');
         if (!file_exists($photoDir)) {
             mkdir($photoDir, 0755, true);
@@ -256,32 +260,66 @@ class ContactCandidateController extends Controller
         $emp->update($request->all());
 
         /* ============================
-       ADD NEW DOCUMENTS
-    ============================ */
+           DOCUMENT SYNC (IMPORTANT)
+        ============================ */
+
+        $incoming = $request->input('documents', []);
+        $existingIds = [];
+        $newFiles = [];
+
+        // Separate IDs & files
+        foreach ($incoming as $item) {
+            if (is_numeric($item)) {
+                $existingIds[] = (int)$item;
+            }
+        }
+
         if ($request->hasFile('documents')) {
+            foreach ($request->file('documents') as $file) {
+                if ($file instanceof \Illuminate\Http\UploadedFile) {
+                    $newFiles[] = $file;
+                }
+            }
+        }
+
+        /* 🔥 DELETE REMOVED DOCUMENTS */
+        $toDelete = ContractCandidateDocument::where('employee_id', $emp->id)
+            ->whereNotIn('id', $existingIds)
+            ->get();
+
+        foreach ($toDelete as $doc) {
+            if (!empty($doc->document_path) && file_exists(public_path($doc->document_path))) {
+                unlink(public_path($doc->document_path));
+            }
+            $doc->delete();
+        }
+
+        /* ➕ ADD NEW DOCUMENT FILES */
+        if (!empty($newFiles)) {
 
             $docDir = public_path('uploads/contract_candidate/documents');
             if (!file_exists($docDir)) {
                 mkdir($docDir, 0755, true);
             }
 
-            foreach ($request->file('documents') as $doc) {
+            foreach ($newFiles as $file) {
 
-                $originalName = $doc->getClientOriginalName();
+                $originalName = $file->getClientOriginalName();
 
                 $docName = now()->format('YmdHis') . '_' . rand(10000, 99999) . '_' .
-                    Str::slug(pathinfo($originalName, PATHINFO_FILENAME)) .
-                    '.' . $doc->getClientOriginalExtension();
+                    Str::slug(pathinfo($originalName, PATHINFO_FILENAME)) . '.' .
+                    $file->getClientOriginalExtension();
 
-                $doc->move($docDir, $docName);
+                $file->move($docDir, $docName);
 
                 ContractCandidateDocument::create([
                     'employee_id'   => $emp->id,
                     'original_name' => $originalName,
-                    'document_path' => 'uploads/contract_employees/documents/' . $docName,
+                    'document_path' => 'uploads/contract_candidate/documents/' . $docName,
                 ]);
             }
         }
+
 
         if (is_array($request->notes_details)) {
             foreach ($request->notes_details as $note) {

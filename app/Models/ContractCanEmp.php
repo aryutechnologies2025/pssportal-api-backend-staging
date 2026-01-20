@@ -30,8 +30,7 @@ class ContractCanEmp extends Model
         'uan_number', //
         'employee_id',
         'esic', //
-        'profile_picture'
-
+        'profile_picture',
     ];
 
     public function company()

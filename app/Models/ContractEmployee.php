@@ -28,7 +28,6 @@ class ContractEmployee extends Model
         'joined_date',
         'education',
         'profile_picture'
-
     ];
 
     public function company()

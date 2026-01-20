@@ -12,15 +12,40 @@ use App\Models\Employee;
 use Illuminate\Support\Facades\Hash;
 use App\Models\ContractEmployeeDocument;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 class ContractEmployeeController extends Controller
 {
     public function store(Request $request)
     {
-        $request->validate([
-            // 'phone_number' => 'required|unique:contract_employees,phone_number',
-            'aadhar_number' => 'required|digits:12|unique:contract_can_emps,aadhar_number'
-        ]);
+        // $request->validate([
+        //     // 'phone_number' => 'required|unique:contract_employees,phone_number',
+        //     'aadhar_number' => 'required|digits:12|unique:contract_can_emps,aadhar_number',
+        //     'employee_id' => 'unique:contract_can_emps,employee_id'
+        // ]);
+        $validator = Validator::make(
+            $request->all(),
+            [
+                'aadhar_number' => 'required|digits:12|unique:contract_can_emps,aadhar_number',
+                'employee_id'   => 'required|unique:contract_can_emps,employee_id',
+            ],
+            [
+                'aadhar_number.required' => 'Aadhar number is required.',
+                'aadhar_number.digits'   => 'Aadhar number must be exactly 12 digits.',
+                'aadhar_number.unique'   => 'This Aadhar number is already registered.',
+
+                'employee_id.required'   => 'Employee ID is required.',
+                'employee_id.unique'     => 'This Employee ID already exists.',
+            ]
+        );
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation errors',
+                'errors'  => $validator->errors()
+            ], 422);
+        }
 
         $data = $request->all();
 
@@ -188,10 +213,39 @@ class ContractEmployeeController extends Controller
     {
         $emp = ContractCanEmp::where('id', $id)->where('is_deleted', 0)->firstOrFail();
 
-        $request->validate([
-            // 'phone_number' => 'unique:contract_employees,phone_number,' . $id,
-            'aadhar_number' => 'digits:12|unique:contract_can_emps,aadhar_number,' . $id,
-        ]);
+        // $request->validate([
+        //     // 'phone_number' => 'unique:contract_employees,phone_number,' . $id,
+        //     'aadhar_number' => 'digits:12|unique:contract_can_emps,aadhar_number,' . $id,
+        // ]);
+
+
+        $validator = Validator::make(
+            $request->all(),
+            [
+                'aadhar_number' => [
+                    'required',
+                    'digits:12',
+                    Rule::unique('contract_can_emps', 'aadhar_number')->ignore($id),
+                ],
+                'employee_id' => [
+                    'required',
+                    Rule::unique('contract_can_emps', 'employee_id')->ignore($id),
+                ],
+            ],
+            [
+                'aadhar_number.unique' => 'This Aadhar number is already used.',
+                'employee_id.unique'   => 'This Employee ID already exists.',
+            ]
+        );
+
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation errors',
+                'errors'  => $validator->errors()
+            ], 422);
+        }
 
         $data = $request->all();
         if ($request->reference === 'other') {
@@ -229,22 +283,83 @@ class ContractEmployeeController extends Controller
         /* ============================
        ADD NEW DOCUMENTS
         ============================ */
+        // if ($request->hasFile('documents')) {
+
+        //     $docDir = public_path('uploads/contract_employee/documents');
+        //     if (!file_exists($docDir)) {
+        //         mkdir($docDir, 0755, true);
+        //     }
+
+        //     foreach ($request->file('documents') as $doc) {
+
+        //         $originalName = $doc->getClientOriginalName();
+        //         $employeeId = $data['employee_id'] ?? 'emp';
+        //         $docName = $employeeId . '_' . now()->format('YmdHis') . '_' . rand(10000, 99999) . '_' .
+        //             Str::slug(pathinfo($originalName, PATHINFO_FILENAME)) .
+        //             '.' . $doc->getClientOriginalExtension();
+
+        //         $doc->move($docDir, $docName);
+
+        //         ContractEmployeeDocument::create([
+        //             'employee_id'   => $emp->id,
+        //             'original_name' => $originalName,
+        //             'document_path' => 'uploads/contract_employee/documents/' . $docName,
+        //         ]);
+        //     }
+        // }
+
+         /* ============================
+           DOCUMENT SYNC (IMPORTANT)
+        ============================ */
+
+        $incoming = $request->input('documents', []);
+        $existingIds = [];
+        $newFiles = [];
+
+        // Separate IDs & files
+        foreach ($incoming as $item) {
+            if (is_numeric($item)) {
+                $existingIds[] = (int)$item;
+            }
+        }
+
         if ($request->hasFile('documents')) {
+            foreach ($request->file('documents') as $file) {
+                if ($file instanceof \Illuminate\Http\UploadedFile) {
+                    $newFiles[] = $file;
+                }
+            }
+        }
+
+        /* 🔥 DELETE REMOVED DOCUMENTS */
+        $toDelete = ContractEmployeeDocument::where('employee_id', $emp->id)
+            ->whereNotIn('id', $existingIds)
+            ->get();
+
+        foreach ($toDelete as $doc) {
+            if (!empty($doc->document_path) && file_exists(public_path($doc->document_path))) {
+                unlink(public_path($doc->document_path));
+            }
+            $doc->delete();
+        }
+
+        /* ➕ ADD NEW DOCUMENT FILES */
+        if (!empty($newFiles)) {
 
             $docDir = public_path('uploads/contract_employee/documents');
             if (!file_exists($docDir)) {
                 mkdir($docDir, 0755, true);
             }
 
-            foreach ($request->file('documents') as $doc) {
+            foreach ($newFiles as $file) {
 
-                $originalName = $doc->getClientOriginalName();
-                $employeeId = $data['employee_id'] ?? 'emp';
-                $docName = $employeeId . '_' . now()->format('YmdHis') . '_' . rand(10000, 99999) . '_' .
-                    Str::slug(pathinfo($originalName, PATHINFO_FILENAME)) .
-                    '.' . $doc->getClientOriginalExtension();
+                $originalName = $file->getClientOriginalName();
 
-                $doc->move($docDir, $docName);
+                $docName = now()->format('YmdHis') . '_' . rand(10000, 99999) . '_' .
+                    Str::slug(pathinfo($originalName, PATHINFO_FILENAME)) . '.' .
+                    $file->getClientOriginalExtension();
+
+                $file->move($docDir, $docName);
 
                 ContractEmployeeDocument::create([
                     'employee_id'   => $emp->id,
