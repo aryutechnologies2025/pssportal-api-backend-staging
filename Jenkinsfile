@@ -35,14 +35,17 @@ pipeline {
         }
 
         stage('Run New Container') {
-            steps {
-                sh """
-                docker run -d --name ${CONTAINER_NAME}_new \
-                -p ${PORT}:80 \
-                ${IMAGE_TAG}
-                """
+    steps {
+        sh """
+        docker run -d --name ${CONTAINER_NAME}_new \
+        --add-host=host.docker.internal:host-gateway \
+        -p ${PORT}:80 \
+        -v /var/www/staging/pssportal-api-backend/.env:/var/www/html/.env \
+        ${IMAGE_TAG}
+        """
             }
         }
+
 
         stage('Health Check') {
             steps {
