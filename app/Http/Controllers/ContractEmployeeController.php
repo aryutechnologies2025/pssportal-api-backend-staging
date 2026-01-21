@@ -203,7 +203,7 @@ class ContractEmployeeController extends Controller
 
     public function show($id)
     {
-        $emp = ContractCanEmp::where('id', $id)
+        $emp = ContractCanEmp::with('documents')->where('id', $id)
             ->where('is_deleted', 0)
             ->firstOrFail();
 
@@ -301,30 +301,46 @@ class ContractEmployeeController extends Controller
         /* ============================
        UPDATE PROFILE PHOTO
      ============================ */
+        // $photoDir = public_path('uploads/contract_employee/profile');
+        // if (!file_exists($photoDir)) {
+        //     mkdir($photoDir, 0755, true);
+        // }
+
+        // if ($request->hasFile('profile_picture')) {
+
+        //     // ❌ delete old photo
+        //     if (!empty($emp->profile_picture) && file_exists(public_path($emp->profile_picture))) {
+        //         unlink(public_path($emp->profile_picture));
+        //     }
+
+        //     $photo = $request->file('profile_picture');
+        //     $employeeId = $data['employee_id'] ?? 'emp'; // fallback safety
+        //     $extension  = $photo->getClientOriginalExtension();
+        //     $photoName = $employeeId . '_' . rand(10000, 99999) . '_' . now()->format('YmdHis') . '.' . $extension;
+
+        //     $photo->move($photoDir, $photoName);
+
+        //     $data['profile_picture'] = 'uploads/contract_employee/profile/' . $photoName;
+        // }
+
         $photoDir = public_path('uploads/contract_employee/profile');
         if (!file_exists($photoDir)) {
             mkdir($photoDir, 0755, true);
         }
 
         if ($request->hasFile('profile_picture')) {
-
-            // ❌ delete old photo
-            if (!empty($emp->profile_picture) && file_exists(public_path($emp->profile_picture))) {
-                unlink(public_path($emp->profile_picture));
-            }
-
             $photo = $request->file('profile_picture');
             $employeeId = $data['employee_id'] ?? 'emp'; // fallback safety
             $extension  = $photo->getClientOriginalExtension();
             $photoName = $employeeId . '_' . rand(10000, 99999) . '_' . now()->format('YmdHis') . '.' . $extension;
-
             $photo->move($photoDir, $photoName);
 
             $data['profile_picture'] = 'uploads/contract_employee/profile/' . $photoName;
         }
 
 
-        $emp->update($request->all());
+
+        $emp->update($data);
 
         /* ============================
        ADD NEW DOCUMENTS
