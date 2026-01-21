@@ -308,7 +308,7 @@ class ContractEmployeeController extends Controller
         //     }
         // }
 
-         /* ============================
+        /* ============================
            DOCUMENT SYNC (IMPORTANT)
         ============================ */
 
@@ -507,10 +507,10 @@ class ContractEmployeeController extends Controller
         }
 
         // Date format: YYYYMMDD
-        $dateOfJoining = Carbon::parse($joining_date)->format('Ymd');
+        $dateOfJoining = Carbon::parse($joining_date)->format('Ym');
 
         // Prefix example: PSS20250112
-        $prefix = $company->prefix . $dateOfJoining;
+        $prefix = $company->prefix;
 
         // Get last employee for same prefix
         $lastEmployee = ContractCanEmp::where('employee_id', 'like', $prefix . '%')
@@ -524,7 +524,7 @@ class ContractEmployeeController extends Controller
             $nextNumber = '001';
         }
 
-        return $prefix . $nextNumber;
+        return $prefix . $dateOfJoining . $nextNumber;
     }
 
 
@@ -563,7 +563,7 @@ class ContractEmployeeController extends Controller
         $dateOfJoining = Carbon::parse($request->date_of_joining)->format('Ym');
 
         $company =  Company::where('id', $company_id)->where('company_emp_id', 'automatic')->select('company_emp_id', 'prefix')->first();
-        $prefix = $company->prefix . $dateOfJoining;
+        $prefix = $company->prefix;
 
         /**
          * Get last employee_id for same date
@@ -582,7 +582,7 @@ class ContractEmployeeController extends Controller
             $nextNumber = '001';
         }
 
-        $newEmployeeId = $prefix . $nextNumber;
+        $newEmployeeId = $prefix . $dateOfJoining . $nextNumber;
 
         return response()->json([
             'success' => true,
