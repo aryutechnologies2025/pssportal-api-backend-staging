@@ -8,8 +8,10 @@ pipeline {
     environment {
         APP_NAME = "pss-api"
         CONTAINER_NAME = "staging_api"
-        PORT = "8000"
+        LIVE_PORT = "8000"
+        TEST_PORT = "8001"
         BRANCH = "main"
+        ENV_FILE = "/var/www/staging/pssportal-api-backend/.env"
     }
 
     stages {
@@ -24,7 +26,7 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 script {
-                    COMMIT = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
+                    def COMMIT = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
                     env.IMAGE_TAG = "${APP_NAME}:${COMMIT}"
                 }
 
@@ -34,34 +36,44 @@ pipeline {
             }
         }
 
-        stage('Run New Container') {
-    steps {
-        sh """
-        docker run -d --name ${CONTAINER_NAME}_new \
-        --add-host=host.docker.internal:host-gateway \
-        -p ${PORT}:80 \
-        -v /var/www/staging/pssportal-api-backend/.env:/var/www/html/.env \
-        ${IMAGE_TAG}
-        """
-            }
-        }
-
-
-        stage('Health Check') {
+        stage('Run New Container (Test Port)') {
             steps {
                 sh """
-                sleep 10
-                curl -f http://localhost:${PORT}/api/health
+                docker run -d --name ${CONTAINER_NAME}_new \
+                --add-host=host.docker.internal:host-gateway \
+                -p ${TEST_PORT}:80 \
+                -v ${ENV_FILE}:/var/www/html/.env \
+                ${IMAGE_TAG}
                 """
             }
         }
 
-        stage('Switch Containers') {
+        stage('Health Check (Test Port)') {
             steps {
                 sh """
+                sleep 10
+                curl -f http://localhost:${TEST_PORT}/api/health
+                """
+            }
+        }
+
+        stage('Switch Containers (Go Live)') {
+            steps {
+                sh """
+                echo "Stopping old container..."
                 docker stop ${CONTAINER_NAME} || true
                 docker rm ${CONTAINER_NAME} || true
-                docker rename ${CONTAINER_NAME}_new ${CONTAINER_NAME}
+
+                echo "Stopping test container..."
+                docker stop ${CONTAINER_NAME}_new || true
+                docker rm ${CONTAINER_NAME}_new || true
+
+                echo "Starting new live container..."
+                docker run -d --name ${CONTAINER_NAME} \
+                --add-host=host.docker.internal:host-gateway \
+                -p ${LIVE_PORT}:80 \
+                -v ${ENV_FILE}:/var/www/html/.env \
+                ${IMAGE_TAG}
                 """
             }
         }
@@ -78,10 +90,13 @@ pipeline {
 
     post {
         success {
-            echo "✅ Deploy Success: ${IMAGE_TAG}"
+            echo "✅ DEPLOY SUCCESS"
+            echo "Image deployed: ${IMAGE_TAG}"
+            echo "Live URL: http://localhost:${LIVE_PORT}"
         }
+
         failure {
-            echo "❌ Deploy Failed — Cleaning up"
+            echo "❌ DEPLOY FAILED — CLEANING UP"
             sh """
             docker stop ${CONTAINER_NAME}_new || true
             docker rm ${CONTAINER_NAME}_new || true
