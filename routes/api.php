@@ -46,6 +46,10 @@ use App\Http\Controllers\FinanceController;
 // Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 //     return $request->user();
 // });
+Route::get('/health', function () {
+    return response()->json(['status' => 'ok'], 200);
+});
+
 Route::post('/login', [AdminController::class, 'login']);
 
 Route::middleware('static.auth')->group(function () {
