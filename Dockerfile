@@ -30,7 +30,9 @@ COPY . .
 RUN composer install --no-dev --optimize-autoloader
 
 # Permissions
-RUN chown -R www-data:www-data storage bootstrap/cache
+RUN mkdir -p storage bootstrap/cache \
+    && chown -R www-data:www-data storage bootstrap/cache
+
 
 EXPOSE 80
 CMD ["apache2-foreground"]
