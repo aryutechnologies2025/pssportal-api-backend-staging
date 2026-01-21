@@ -14,45 +14,45 @@ class CompanyController extends Controller
 {
     public function store(Request $request)
     {
-        $validator = Validator::make($request->all(), [
+        // $validator = Validator::make($request->all(), [
 
-            'gst_number' => [
-                Rule::unique('companies', 'gst_number')
-                    ->where(fn($q) => $q->where('is_deleted', 0)),
-            ],
+        //     'gst_number' => [
+        //         Rule::unique('companies', 'gst_number')
+        //             ->where(fn($q) => $q->where('is_deleted', 0)),
+        //     ],
 
-            // 'website_url' => [
-            //     'required',
-            //     Rule::unique('companies', 'website_url')
-            //         ->where(fn($q) => $q->where('is_deleted', 0)),
-            // ],
+        //     // 'website_url' => [
+        //     //     'required',
+        //     //     Rule::unique('companies', 'website_url')
+        //     //         ->where(fn($q) => $q->where('is_deleted', 0)),
+        //     // ],
 
-            'support_email' => [
-                'required',
-                'email',
-                Rule::unique('companies', 'support_email')
-                    ->where(fn($q) => $q->where('is_deleted', 0)),
-            ],
+        //     'support_email' => [
+        //         'required',
+        //         'email',
+        //         Rule::unique('companies', 'support_email')
+        //             ->where(fn($q) => $q->where('is_deleted', 0)),
+        //     ],
 
-            'billing_email' => [
-                'required',
-                'email',
-                Rule::unique('companies', 'billing_email')
-                    ->where(fn($q) => $q->where('is_deleted', 0)),
-            ],
-        ], [
-            'gst_number.unique'    => 'GST number already exists.',
-            'support_email.unique' => 'Support email already exists.',
-            'billing_email.unique' => 'Billing email already exists.',
-        ]);
+        //     'billing_email' => [
+        //         'required',
+        //         'email',
+        //         Rule::unique('companies', 'billing_email')
+        //             ->where(fn($q) => $q->where('is_deleted', 0)),
+        //     ],
+        // ], [
+        //     'gst_number.unique'    => 'GST number already exists.',
+        //     'support_email.unique' => 'Support email already exists.',
+        //     'billing_email.unique' => 'Billing email already exists.',
+        // ]);
 
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Validation failed',
-                'errors'  => $validator->errors(),
-            ], 422);
-        }
+        // if ($validator->fails()) {
+        //     return response()->json([
+        //         'success' => false,
+        //         'message' => 'Validation failed',
+        //         'errors'  => $validator->errors(),
+        //     ], 422);
+        // }
 
 
         $company = Company::create($request->all());
@@ -161,60 +161,60 @@ class CompanyController extends Controller
     public function update(Request $request, $id)
     {
 
-        $validator = Validator::make($request->all(), [
+        // $validator = Validator::make($request->all(), [
 
-            'gst_number' => [
-                Rule::unique('companies', 'gst_number')
-                    ->ignore($id)
-                    ->where(fn($q) => $q->where('is_deleted', 0)),
-            ],
+        //     'gst_number' => [
+        //         Rule::unique('companies', 'gst_number')
+        //             ->ignore($id)
+        //             ->where(fn($q) => $q->where('is_deleted', 0)),
+        //     ],
 
-            // 'website_url' => [
-            //     'required',
-            //     Rule::unique('companies', 'website_url')
-            //         ->ignore($id)
-            //         ->where(fn($q) => $q->where('is_deleted', 0)),
-            // ],
+        //     // 'website_url' => [
+        //     //     'required',
+        //     //     Rule::unique('companies', 'website_url')
+        //     //         ->ignore($id)
+        //     //         ->where(fn($q) => $q->where('is_deleted', 0)),
+        //     // ],
 
-            'support_email' => [
-                'required',
-                'email',
-                Rule::unique('companies', 'support_email')
-                    ->ignore($id)
-                    ->where(fn($q) => $q->where('is_deleted', 0)),
-            ],
+        //     'support_email' => [
+        //         'required',
+        //         'email',
+        //         Rule::unique('companies', 'support_email')
+        //             ->ignore($id)
+        //             ->where(fn($q) => $q->where('is_deleted', 0)),
+        //     ],
 
-            'billing_email' => [
-                'required',
-                'email',
-                Rule::unique('companies', 'billing_email')
-                    ->ignore($id)
-                    ->where(fn($q) => $q->where('is_deleted', 0)),
-            ],
+        //     'billing_email' => [
+        //         'required',
+        //         'email',
+        //         Rule::unique('companies', 'billing_email')
+        //             ->ignore($id)
+        //             ->where(fn($q) => $q->where('is_deleted', 0)),
+        //     ],
 
-        ], [
-            'gst_number.unique'    => 'GST number already exists.',
-            // 'website_url.unique'   => 'Website URL already exists.',
-            'support_email.unique' => 'Support email already exists.',
-            'billing_email.unique' => 'Billing email already exists.',
-        ]);
+        // ], [
+        //     'gst_number.unique'    => 'GST number already exists.',
+        //     // 'website_url.unique'   => 'Website URL already exists.',
+        //     'support_email.unique' => 'Support email already exists.',
+        //     'billing_email.unique' => 'Billing email already exists.',
+        // ]);
 
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Validation failed',
-                'errors'  => $validator->errors(),
-            ], 422);
-        }
+        // if ($validator->fails()) {
+        //     return response()->json([
+        //         'success' => false,
+        //         'message' => 'Validation failed',
+        //         'errors'  => $validator->errors(),
+        //     ], 422);
+        // }
 
         $company = Company::findOrFail($id);
 
-        $request->validate([
-            'gst_number'    => 'unique:companies,gst_number,' . $id,
-            // 'website_url'   => 'unique:companies,website_url,' . $id,
-            'support_email' => 'unique:companies,support_email,' . $id,
-            'billing_email' => 'unique:companies,billing_email,' . $id,
-        ]);
+        // $request->validate([
+        //     'gst_number'    => 'unique:companies,gst_number,' . $id,
+        //     // 'website_url'   => 'unique:companies,website_url,' . $id,
+        //     'support_email' => 'unique:companies,support_email,' . $id,
+        //     'billing_email' => 'unique:companies,billing_email,' . $id,
+        // ]);
 
         $company->update($request->all());
 
