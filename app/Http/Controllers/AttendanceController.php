@@ -102,7 +102,7 @@ class AttendanceController extends Controller
             $from = Carbon::parse($request->from_date)->startOfDay();
             $to   = Carbon::parse($request->to_date)->endOfDay();
 
-            $query->whereBetween('created_at', [$from, $to]);
+            $query->whereBetween('attendance_date', [$from, $to]);
         }
 
         // Company filter
@@ -237,58 +237,157 @@ class AttendanceController extends Controller
         ]);
     }
 
+    // public function import(Request $request)
+    // {
+    //     $alreadyExists = Attendance::where('company_id', $request->company_id)
+    //         ->where('is_deleted', 0)
+    //         ->whereDate('attendance_date', $request->attendance_date)
+    //         ->exists();
+
+    //     if ($alreadyExists) {
+    //         return response()->json([
+    //             'success' => false,
+    //             'errors' => [
+    //                 'attendance_date' => [
+    //                     'Attendance for this company on this date already exists.'
+    //                 ]
+    //             ]
+    //         ], 422);
+    //     }
+
+    //     $file = $request->file('file');
+    //     $handle = fopen($file->getRealPath(), 'r');
+
+    //     DB::beginTransaction();
+    //     try {
+    //         $header = fgetcsv($handle); // CSV header
+
+    //         // 🔒 Prevent duplicate attendance
+    //         $alreadyExists = Attendance::where('company_id', $request->company_id)
+    //             ->whereDate('attendance_date', $request->attendance_date)
+    //             ->where('is_deleted', 0)
+    //             ->exists();
+
+    //         if ($alreadyExists) {
+    //             return response()->json([
+    //                 'success' => false,
+    //                 'message' => 'Attendance already exists for this date'
+    //             ], 422);
+    //         }
+
+    //         $attendance = Attendance::create([
+    //             'company_id' => $request->company_id,
+    //             'attendance_date' => $request->attendance_date,
+    //             'created_by' => $request->created_by,
+    //         ]);
+
+    //         $inserted = 0;
+    //         $skipped  = 0;
+
+    //         while (($row = fgetcsv($handle)) !== false) {
+
+    //             $data = array_combine($header, $row);
+
+    //             // 🔹 Find contract employee
+    //             $employee = ContractCanEmp::where('employee_id', $data['employee_id'])
+    //                 ->where('company_id', $request->company_id)
+    //                 ->where('is_deleted', 0)
+    //                 ->first();
+
+    //             if (!$employee) {
+    //                 $skipped++;
+    //                 continue;
+    //             }
+
+    //             // // 🔹 Parse multiple shift codes from CSV
+    //             // $shiftCodes = array_map('trim', explode(',', $data['company_shift']));
+
+    //             // // 🔹 Fetch all matching shifts
+    //             // $companyShifts = CompanyShifts::whereIn('company_shift_id', $shiftCodes)
+    //             //     ->where('parent_id', $request->company_id)
+    //             //     ->where('is_deleted', 0)
+    //             //     ->pluck('id')
+    //             //     ->toArray();
+
+    //             // if (empty($companyShifts)) {
+    //             //     $skipped++;
+    //             //     continue;
+    //             // }
+
+    //             // 🔹 Normalize attendance value
+    //             $rawAttendance = strtolower(trim($data['attendance']));
+
+    //             if (in_array($rawAttendance, ['present', 'presend', 'p', 'P', '1'])) {
+    //                 $attendanceStatus = 1;
+    //             } elseif (in_array($rawAttendance, ['absent', 'a', 'A', '0'])) {
+    //                 $attendanceStatus = 0;
+    //             } else {
+    //                 $skipped++;
+    //                 continue;
+    //             }
+
+    //             AttendanceDetails::create([
+    //                 'attendance_id' => $attendance->id,
+    //                 'employee_id'   => $employee->id, // ✅ correct ID
+    //                 'attendance'    => $attendanceStatus,
+    //                 // 'shift_id'      => $companyShifts
+    //             ]);
+
+    //             $inserted++;
+    //         }
+
+    //         fclose($handle);
+    //         DB::commit();
+
+    //         return response()->json([
+    //             'success' => true,
+    //             'message' => 'Attendance imported successfully',
+    //             'inserted' => $inserted,
+    //             'skipped' => $skipped
+    //         ]);
+    //     } catch (\Exception $e) {
+    //         DB::rollBack();
+    //         return response()->json(['error' => $e->getMessage()], 500);
+    //     }
+    // }
+
     public function import(Request $request)
     {
-        $alreadyExists = Attendance::where('company_id', $request->company_id)
-            ->where('is_deleted', 0)
-            ->whereDate('attendance_date', $request->attendance_date)
-            ->exists();
-
-        if ($alreadyExists) {
-            return response()->json([
-                'success' => false,
-                'errors' => [
-                    'attendance_date' => [
-                        'Attendance for this company on this date already exists.'
-                    ]
-                ]
-            ], 422);
-        }
-
         $file = $request->file('file');
         $handle = fopen($file->getRealPath(), 'r');
 
         DB::beginTransaction();
+
         try {
-            $header = fgetcsv($handle); // CSV header
-
-            // 🔒 Prevent duplicate attendance
-            $alreadyExists = Attendance::where('company_id', $request->company_id)
-                ->whereDate('attendance_date', $request->attendance_date)
-                ->where('is_deleted', 0)
-                ->exists();
-
-            if ($alreadyExists) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Attendance already exists for this date'
-                ], 422);
-            }
-
-            $attendance = Attendance::create([
-                'company_id' => $request->company_id,
-                'attendance_date' => $request->attendance_date,
-                'created_by' => $request->created_by,
-            ]);
+            $header = fgetcsv($handle);
 
             $inserted = 0;
+            $updated  = 0;
             $skipped  = 0;
 
             while (($row = fgetcsv($handle)) !== false) {
 
                 $data = array_combine($header, $row);
 
-                // 🔹 Find contract employee
+                // 1️⃣ Validate date
+                if (empty($data['attendance_date'])) {
+                    $skipped++;
+                    continue;
+                }
+
+                // 2️⃣ Find or create attendance (company + date)
+                $attendance = Attendance::firstOrCreate(
+                    [
+                        'company_id'       => $request->company_id,
+                        'attendance_date'  => date('Y-m-d', strtotime($data['attendance_date'])),
+                        'is_deleted'       => 0
+                    ],
+                    [
+                        'created_by' => $request->created_by
+                    ]
+                );
+
+                // 3️⃣ Find employee
                 $employee = ContractCanEmp::where('employee_id', $data['employee_id'])
                     ->where('company_id', $request->company_id)
                     ->where('is_deleted', 0)
@@ -299,53 +398,41 @@ class AttendanceController extends Controller
                     continue;
                 }
 
-                // 🔹 Parse multiple shift codes from CSV
-                $shiftCodes = array_map('trim', explode(',', $data['company_shift']));
-
-                // 🔹 Fetch all matching shifts
-                $companyShifts = CompanyShifts::whereIn('company_shift_id', $shiftCodes)
-                    ->where('parent_id', $request->company_id)
-                    ->where('is_deleted', 0)
-                    ->pluck('id')
-                    ->toArray();
-
-                if (empty($companyShifts)) {
-                    $skipped++;
-                    continue;
-                }
-
-
-
-                // 🔹 Normalize attendance value
+                // 4️⃣ Normalize attendance
                 $rawAttendance = strtolower(trim($data['attendance']));
 
-                if (in_array($rawAttendance, ['present', 'presend', 'p', '1'])) {
+                if (in_array($rawAttendance, ['present', 'p', 'P', '1'])) {
                     $attendanceStatus = 1;
-                } elseif (in_array($rawAttendance, ['absent', 'a', '0'])) {
+                } elseif (in_array($rawAttendance, ['absent', 'a', 'A', '0'])) {
                     $attendanceStatus = 0;
                 } else {
                     $skipped++;
                     continue;
                 }
 
-                AttendanceDetails::create([
-                    'attendance_id' => $attendance->id,
-                    'employee_id'   => $employee->id, // ✅ correct ID
-                    'attendance'    => $attendanceStatus,
-                    'shift_id'      => $companyShifts
-                ]);
+                // 5️⃣ Insert or update attendance details
+                $detail = AttendanceDetails::updateOrCreate(
+                    [
+                        'attendance_id' => $attendance->id,
+                        'employee_id'   => $employee->id,
+                    ],
+                    [
+                        'attendance' => $attendanceStatus
+                    ]
+                );
 
-                $inserted++;
+                $detail->wasRecentlyCreated ? $inserted++ : $updated++;
             }
 
             fclose($handle);
             DB::commit();
 
             return response()->json([
-                'success' => true,
-                'message' => 'Attendance imported successfully',
+                'success'  => true,
+                'message'  => 'Attendance imported successfully',
                 'inserted' => $inserted,
-                'skipped' => $skipped
+                'updated'  => $updated,
+                'skipped'  => $skipped
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
