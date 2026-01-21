@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\Employee;
 use App\Models\Activities;
 use Illuminate\Support\Facades\Hash;
+use App\Models\Setting;
 
 class AdminController extends Controller
 {
@@ -51,6 +52,7 @@ class AdminController extends Controller
             'type' => 'admin'
         ]);
 
+        $setting = Setting::select('date_format')->first();
         // 4️⃣ Return success response (optionally add token later)
         return response()->json([
             'success' => true,
@@ -59,7 +61,8 @@ class AdminController extends Controller
                 'id' => $user->id,
                 'email' => $user->offical_email,
                 'role_id' => $user->role_id
-            ]
+            ],
+            'setting' => $setting,
         ]);
     }
 

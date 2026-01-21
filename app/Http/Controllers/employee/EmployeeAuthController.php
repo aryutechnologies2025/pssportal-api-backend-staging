@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use App\Models\Employee;
 use Illuminate\Support\Facades\Hash;
 use App\Models\Permission;
+use App\Models\Setting;
 
 class EmployeeAuthController extends Controller
 {
@@ -45,6 +46,8 @@ class EmployeeAuthController extends Controller
 
         session(['employee_id' => $employee->id]);
 
+        $setting = Setting::select('date_format')->first();
+
         return response()->json([
             'status' => true,
             'employee' => [
@@ -55,6 +58,7 @@ class EmployeeAuthController extends Controller
                 'full_name' => $employee->full_name,
                 'photo' => $employee->photo,
             ],
+            'setting' => $setting,
             'permission' => $permission
         ]);
     }

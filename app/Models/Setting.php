@@ -16,5 +16,6 @@ class Setting extends Model
         'address',
         'created_by',
         'gst_number',
+        'date_format'
     ];
 }

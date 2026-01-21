@@ -69,20 +69,43 @@ class AttendanceReportController extends Controller
                 }
             }
 
-            if ($login && $logout) {
+            // if ($login || $logout) {
+            //     $presentDays++;
+
+            //     $totalSeconds = Carbon::parse($logout->attendance_time)
+            //         ->diffInSeconds(Carbon::parse($login->attendance_time));
+
+            //     $payableSeconds = $totalSeconds - $breakSeconds;
+
+            //     $status = 'Present';
+            // } else {
+            //     $absentDays++;
+            //     $status = 'Absent';
+            //     $payableSeconds = 0;
+            // }
+
+
+            if ($login) {
+
                 $presentDays++;
-
-                $totalSeconds = Carbon::parse($logout->attendance_time)
-                    ->diffInSeconds(Carbon::parse($login->attendance_time));
-
-                $payableSeconds = $totalSeconds - $breakSeconds;
-
                 $status = 'Present';
+
+                if ($logout) {
+                    $totalSeconds = Carbon::parse($logout->attendance_time)
+                        ->diffInSeconds(Carbon::parse($login->attendance_time));
+                } else {
+                    $totalSeconds = 0; // login exists but logout missing
+                }
+
+                $payableSeconds = max($totalSeconds - $breakSeconds, 0);
             } else {
+
                 $absentDays++;
                 $status = 'Absent';
+                $totalSeconds = 0;
                 $payableSeconds = 0;
             }
+
 
             $report[] = [
                 'employee_name' => $employee?->full_name,
@@ -166,16 +189,37 @@ class AttendanceReportController extends Controller
                     }
                 }
 
-                if ($login && $logout) {
-                    $totalSeconds = Carbon::parse($logout->attendance_time)
-                        ->diffInSeconds(Carbon::parse($login->attendance_time));
+                // if ($login || $logout) {
+                //     $totalSeconds = Carbon::parse($logout->attendance_time)
+                //         ->diffInSeconds(Carbon::parse($login->attendance_time));
 
-                    $payableSeconds = max($totalSeconds - $breakSeconds, 0);
+                //     $payableSeconds = max($totalSeconds - $breakSeconds, 0);
+                //     $status = 'Present';
+                //     $presentCount++;
+                // } else {
+                //     $status = 'Absent';
+                //     $absentCount++;
+                // }
+
+                if ($login) {
+
                     $status = 'Present';
                     $presentCount++;
+
+                    if ($logout) {
+                        $totalSeconds = Carbon::parse($logout->attendance_time)
+                            ->diffInSeconds(Carbon::parse($login->attendance_time));
+                    } else {
+                        $totalSeconds = 0; // login but no logout
+                    }
+
+                    $payableSeconds = max($totalSeconds - $breakSeconds, 0);
                 } else {
+
                     $status = 'Absent';
                     $absentCount++;
+                    $totalSeconds = 0;
+                    $payableSeconds = 0;
                 }
             } else {
                 $status = 'Absent';
