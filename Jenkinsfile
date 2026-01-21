@@ -83,5 +83,26 @@ pipeline {
             steps {
                 sh """
                 docker exec ${CONTAINER_NAME} php artisan optimize:clear
-                doc
+                docker exec ${CONTAINER_NAME} php artisan migrate --force
+                """
+            }
+        }
+    }
+
+    post {
+        success {
+            echo "✅ DEPLOY SUCCESS"
+            echo "Image deployed: ${IMAGE_TAG}"
+            echo "Live URL: http://localhost:${LIVE_PORT}"
+        }
+
+        failure {
+            echo "❌ DEPLOY FAILED — CLEANING UP"
+            sh """
+            docker stop ${CONTAINER_NAME}_new || true
+            docker rm ${CONTAINER_NAME}_new || true
+            """
+        }
+    }
+}
 
