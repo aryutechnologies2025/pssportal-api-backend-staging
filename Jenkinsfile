@@ -29,7 +29,6 @@ pipeline {
                     def COMMIT = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
                     env.IMAGE_TAG = "${APP_NAME}:${COMMIT}"
                 }
-
                 sh """
                 docker build -t ${IMAGE_TAG} .
                 """
@@ -41,6 +40,7 @@ pipeline {
                 sh """
                 docker run -d --name ${CONTAINER_NAME}_new \
                 --add-host=host.docker.internal:host-gateway \
+                --add-host=staging_mysql:host-gateway \
                 -p ${TEST_PORT}:80 \
                 -v ${ENV_FILE}:/var/www/html/.env \
                 ${IMAGE_TAG}
@@ -60,7 +60,7 @@ pipeline {
         stage('Switch Containers (Go Live)') {
             steps {
                 sh """
-                echo "Stopping old container..."
+                echo "Stopping old live container..."
                 docker stop ${CONTAINER_NAME} || true
                 docker rm ${CONTAINER_NAME} || true
 
@@ -71,6 +71,7 @@ pipeline {
                 echo "Starting new live container..."
                 docker run -d --name ${CONTAINER_NAME} \
                 --add-host=host.docker.internal:host-gateway \
+                --add-host=staging_mysql:host-gateway \
                 -p ${LIVE_PORT}:80 \
                 -v ${ENV_FILE}:/var/www/html/.env \
                 ${IMAGE_TAG}
@@ -78,30 +79,9 @@ pipeline {
             }
         }
 
-        stage('Run Migrations & Clear Cache') {
+        stage('Clear Cache & Run Migrations') {
             steps {
                 sh """
-                docker exec ${CONTAINER_NAME} php artisan migrate --force
                 docker exec ${CONTAINER_NAME} php artisan optimize:clear
-                """
-            }
-        }
-    }
-
-    post {
-        success {
-            echo "✅ DEPLOY SUCCESS"
-            echo "Image deployed: ${IMAGE_TAG}"
-            echo "Live URL: http://localhost:${LIVE_PORT}"
-        }
-
-        failure {
-            echo "❌ DEPLOY FAILED — CLEANING UP"
-            sh """
-            docker stop ${CONTAINER_NAME}_new || true
-            docker rm ${CONTAINER_NAME}_new || true
-            """
-        }
-    }
-}
+                doc
 
