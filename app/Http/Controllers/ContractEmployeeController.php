@@ -26,16 +26,30 @@ class ContractEmployeeController extends Controller
         $validator = Validator::make(
             $request->all(),
             [
-                'aadhar_number' => 'required|digits:12|unique:contract_can_emps,aadhar_number',
-                'employee_id'   => 'required|unique:contract_can_emps,employee_id',
+                'aadhar_number' => [
+                    'required',
+                    'digits:12',
+                    Rule::unique('contract_can_emps', 'aadhar_number')
+                        ->where(function ($q) use ($request) {
+                            return $q->where('is_deleted', 0);
+                        }),
+                ],
+
+                'employee_id' => [
+                    'required',
+                    Rule::unique('contract_can_emps', 'employee_id')
+                        ->where(function ($q) use ($request) {
+                            return $q->where('is_deleted', 0);
+                        }),
+                ],
             ],
             [
                 'aadhar_number.required' => 'Aadhar number is required.',
                 'aadhar_number.digits'   => 'Aadhar number must be exactly 12 digits.',
-                'aadhar_number.unique'   => 'This Aadhar number is already registered.',
+                'aadhar_number.unique'   => 'This Aadhar number is already registered for this company.',
 
                 'employee_id.required'   => 'Employee ID is required.',
-                'employee_id.unique'     => 'This Employee ID already exists.',
+                'employee_id.unique'     => 'This Employee ID already exists for this company.',
             ]
         );
 
@@ -77,6 +91,31 @@ class ContractEmployeeController extends Controller
         /* ============================
        MULTIPLE DOCUMENT UPLOAD
         ============================ */
+        // if ($request->hasFile('documents')) {
+
+        //     $docDir = public_path('uploads/contract_employee/documents');
+        //     if (!file_exists($docDir)) {
+        //         mkdir($docDir, 0755, true);
+        //     }
+
+        //     foreach ($request->file('documents') as $doc) {
+
+        //         $originalName = $doc->getClientOriginalName();
+        //         $employeeId = $data['employee_id'] ?? 'emp';
+        //         $docName = $employeeId . '_' . now()->format('YmdHis') . '_' . rand(10000, 99999) . '_' .
+        //             Str::slug(pathinfo($originalName, PATHINFO_FILENAME)) .
+        //             '.' . $doc->getClientOriginalExtension();
+
+        //         $doc->move($docDir, $docName);
+
+        //         ContractEmployeeDocument::create([
+        //             'employee_id'   => $emp->id,
+        //             'original_name' => $originalName,
+        //             'document_path' => 'uploads/contract_employee/documents/' . $docName,
+        //         ]);
+        //     }
+        // }
+
         if ($request->hasFile('documents')) {
 
             $docDir = public_path('uploads/contract_employee/documents');
@@ -87,8 +126,8 @@ class ContractEmployeeController extends Controller
             foreach ($request->file('documents') as $doc) {
 
                 $originalName = $doc->getClientOriginalName();
-                $employeeId = $data['employee_id'] ?? 'emp';
-                $docName = $employeeId . '_' . now()->format('YmdHis') . '_' . rand(10000, 99999) . '_' .
+
+                $docName = now()->format('YmdHis') . '_' . rand(10000, 99999) . '_' .
                     Str::slug(pathinfo($originalName, PATHINFO_FILENAME)) .
                     '.' . $doc->getClientOriginalExtension();
 
@@ -217,24 +256,31 @@ class ContractEmployeeController extends Controller
         //     // 'phone_number' => 'unique:contract_employees,phone_number,' . $id,
         //     'aadhar_number' => 'digits:12|unique:contract_can_emps,aadhar_number,' . $id,
         // ]);
-
-
         $validator = Validator::make(
             $request->all(),
             [
                 'aadhar_number' => [
                     'required',
                     'digits:12',
-                    Rule::unique('contract_can_emps', 'aadhar_number')->ignore($id),
+                    Rule::unique('contract_can_emps', 'aadhar_number')
+                        ->ignore($id)
+                        ->where(function ($q) use ($request) {
+                            return $q->where('is_deleted', 0);
+                        }),
                 ],
+
                 'employee_id' => [
                     'required',
-                    Rule::unique('contract_can_emps', 'employee_id')->ignore($id),
+                    Rule::unique('contract_can_emps', 'employee_id')
+                        ->ignore($id)
+                        ->where(function ($q) use ($request) {
+                            return $q->where('is_deleted', 0);
+                        }),
                 ],
             ],
             [
-                'aadhar_number.unique' => 'This Aadhar number is already used.',
-                'employee_id.unique'   => 'This Employee ID already exists.',
+                'aadhar_number.unique' => 'This Aadhaar number is already registered for this company.',
+                'employee_id.unique'   => 'This Employee ID already exists for this company.',
             ]
         );
 
@@ -427,19 +473,16 @@ class ContractEmployeeController extends Controller
 
             $data = array_combine($header, $row);
 
-            /* UNIQUE CHECK */
             $exists = ContractCanEmp::where('aadhar_number', $data['aadhar_number'])
                 ->where('is_deleted', 0)
                 ->exists();
 
             if ($exists) {
-                // $errors[] = [
-                //     'row'   => $data,
-                //     'error' => 'Duplicate Aadhaar number'
-                // ];
                 $skipped++;
-                continue; // ✅ skip ONLY this row, next rows will insert
+                continue;
             }
+
+
             //    dd($aadhar);
             /* 🔹 INSERT */
 
@@ -469,6 +512,7 @@ class ContractEmployeeController extends Controller
                 'address'          => $data['address'] ?? null,
                 'phone_number'     => $data['phone_number'] ?? null,
                 'acc_no'           => $data['acc_no'] ?? null,
+                'account_number'   => $data['account_number'] ?? null,
                 'ifsc_code'        => $data['ifsc_code'] ?? null,
                 'uan_number'       => $data['uan_number'] ?? null,
                 'esic'             => $data['esic'] ?? null,

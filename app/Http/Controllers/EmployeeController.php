@@ -1108,38 +1108,30 @@ class EmployeeController extends Controller
 
     public function getEmpidGenearate(Request $request)
     {
-        // $request->validate([
-        //     'date_of_joining' => 'required|date',
-        // ]);
-
         $dateOfJoining = Carbon::parse($request->date_of_joining)->format('Ym');
+        $prefix = 'pss' . $dateOfJoining;
 
-        $prefix = 'pss';
-
-        /**
-         * Get last employee_id for same date
-         * Example: pss20250112005
-         */
+        // Get last employee for SAME MONTH
         $lastEmployee = Employee::where('gen_employee_id', 'like', $prefix . '%')
             ->orderBy('gen_employee_id', 'desc')
             ->first();
 
         if ($lastEmployee) {
-            // Extract last 3 digits from gen_employee_id
-            $lastNumber = (int) substr($lastEmployee->gen_employee_id, -3);
+            // Extract numeric sequence AFTER prefix+date
+            $lastNumber = (int) substr($lastEmployee->gen_employee_id, strlen($prefix));
             $nextNumber = str_pad($lastNumber + 1, 3, '0', STR_PAD_LEFT);
         } else {
-            // First employee ever
             $nextNumber = '001';
         }
 
-        $newEmployeeId = $prefix . $dateOfJoining . $nextNumber;
+        $newEmployeeId = $prefix . $nextNumber;
 
         return response()->json([
             'success' => true,
             'employee_id' => $newEmployeeId
         ]);
     }
+
 
     public function changepassword(Request $request)
     {
