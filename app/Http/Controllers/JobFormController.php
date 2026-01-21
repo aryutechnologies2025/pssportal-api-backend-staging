@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\JobForm;
+use App\Models\Remark;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
@@ -210,56 +211,64 @@ class JobFormController extends Controller
 
     public function export(Request $request)
     {
-    $query = JobForm::where('is_deleted', 0);
+        $query = JobForm::where('is_deleted', 0);
 
-    // Optional date range filter
-    if ($request->filled('from_date') && $request->filled('to_date')) {
-        $query->whereBetween('created_at', [
-            Carbon::parse($request->from_date)->startOfDay(),
-            Carbon::parse($request->to_date)->endOfDay()
-        ]);
-    }
-
-    $records = $query->orderBy('created_at', 'desc')->get();
-
-    $fileName = 'job_forms_' . now()->format('d_m_Y_H_i_s') . '.csv';
-
-    return response()->stream(function () use ($records) {
-
-        $handle = fopen('php://output', 'w');
-
-        // CSV Header (matches frontend)
-        fputcsv($handle, [
-            'S.No',
-            'Name',
-            'Email',
-            'Contact',
-            'Gender',
-            'District',
-            'Referred By',
-            'Register On',
-            'Remarks'
-        ]);
-
-        foreach ($records as $index => $row) {
-            fputcsv($handle, [
-                $index + 1,
-                $row->name,
-                $row->email_id,
-                $row->contact_number,
-                $row->gender,
-                $row->district,
-                $row->reference,
-                optional($row->created_at)->format('d-m-Y'),
-                $row->remarks
+        if ($request->filled('from_date') && $request->filled('to_date')) {
+            $query->whereBetween('created_at', [
+                Carbon::parse($request->from_date)->startOfDay(),
+                Carbon::parse($request->to_date)->endOfDay()
             ]);
         }
 
-        fclose($handle);
+        // ✅ keep relationship name exactly as-is
+        $records = $query
+            ->with('remarks')
+            ->orderBy('created_at', 'desc')
+            ->get();
 
-    }, 200, [
-        'Content-Type'        => 'text/csv',
-        'Content-Disposition' => "attachment; filename=\"$fileName\"",
-    ]);
+        return response()->stream(function () use ($records) {
+
+            $handle = fopen('php://output', 'w');
+
+            fputcsv($handle, [
+                'S.No',
+                'Name',
+                'Email',
+                'Contact',
+                'Gender',
+                'District',
+                'Referred By',
+                'Register On',
+                'Remarks'
+            ]);
+
+            foreach ($records as $index => $row) {
+
+                // ✅ SAFELY fetch relationship (NOT column)
+                $remarksCollection = $row->getRelationValue('remarks');
+
+                $remarksText = collect($remarksCollection)
+                    ->pluck('notes')
+                    ->implode(' | ');
+
+                fputcsv($handle, [
+                    $index + 1,
+                    $row->name,
+                    $row->email_id,
+                    $row->contact_number,
+                    $row->gender,
+                    $row->district,
+                    $row->reference,
+                    optional($row->created_at)->format('d-m-Y'),
+                    $remarksText
+                ]);
+            }
+
+            fclose($handle);
+
+        }, 200, [
+            'Content-Type'        => 'text/csv',
+            'Content-Disposition' => 'attachment; filename="job_forms.csv"',
+        ]);
     }
 }
