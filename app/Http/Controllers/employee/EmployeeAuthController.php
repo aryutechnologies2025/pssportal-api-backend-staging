@@ -15,7 +15,7 @@ class EmployeeAuthController extends Controller
 
         // dd($request->all());
         // dd(Hash::make('Portal#123'));
-        $employee = Employee::select('id', 'offical_email', 'password', 'company_id', 'role_id')->where('id', '!=', 1)->where('offical_email', $request->email)->first();
+        $employee = Employee::select('id', 'offical_email', 'password', 'company_id', 'role_id', 'full_name', 'photo')->where('id', '!=', 1)->where('offical_email', $request->email)->first();
 
         // dd($employee);
 
@@ -52,6 +52,8 @@ class EmployeeAuthController extends Controller
                 'official_email' => $employee->offical_email,
                 'role_id' => $employee->role_id,
                 'company_id' => $employee->company_id,
+                'full_name' => $employee->full_name,
+                'photo' => $employee->photo,
             ],
             'permission' => $permission
         ]);
