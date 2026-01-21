@@ -20,6 +20,7 @@ class SettingController extends Controller
             'admin_email',
             'address',
             'gst_number',
+            'date_format',
         ]);
 
         $uploadPath = public_path('uploads/setting');
