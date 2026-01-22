@@ -12,16 +12,12 @@ pipeline {
     HOST_PATH = "/var/www/staging/pssportal-api-backend"
     ENV_FILE  = "/var/www/staging/pssportal-api-backend/.env"
     STORAGE   = "/var/www/staging/pssportal-api-backend/storage"
-    BOOTSTRAP= "/var/www/staging/pssportal-api-backend/bootstrap/cache"
 
     IMAGE_TAG = ""
   }
 
   stages {
 
-    // ----------------------------
-    // 1. Checkout Code
-    // ----------------------------
     stage('Checkout') {
       steps {
         checkout scm
@@ -29,25 +25,20 @@ pipeline {
     }
 
     // ----------------------------
-    // 2. Prepare Host Storage
+    // 1. Ensure Storage Exists (NO PERMISSION CHANGES)
     // ----------------------------
-    stage('Prepare Host Storage') {
+    stage('Ensure Storage Structure') {
       steps {
         sh '''
-        echo "Preparing Laravel runtime directories on HOST..."
-
         mkdir -p ${STORAGE}/framework/views
         mkdir -p ${STORAGE}/framework/cache
         mkdir -p ${STORAGE}/framework/sessions
-
-        chown -R www-data:www-data ${STORAGE} ${BOOTSTRAP}
-        chmod -R 775 ${STORAGE} ${BOOTSTRAP}
         '''
       }
     }
 
     // ----------------------------
-    // 3. Build Docker Image
+    // 2. Build Docker Image
     // ----------------------------
     stage('Build Image') {
       steps {
@@ -57,16 +48,14 @@ pipeline {
             returnStdout: true
           ).trim()
         }
-
         sh '''
-        echo "Building image ${APP_NAME}:${IMAGE_TAG}"
         docker build -t ${APP_NAME}:${IMAGE_TAG} .
         '''
       }
     }
 
     // ----------------------------
-    // 4. Start Test Container
+    // 3. Run Test Container
     // ----------------------------
     stage('Run Test Container') {
       steps {
@@ -85,21 +74,19 @@ pipeline {
     }
 
     // ----------------------------
-    // 5. Health Check
+    // 4. Health Check
     // ----------------------------
     stage('Health Check') {
       steps {
         sh '''
-        echo "Waiting for API to boot..."
         sleep 10
-
         curl -f http://localhost:${TEST_PORT}/api/health
         '''
       }
     }
 
     // ----------------------------
-    // 6. Run DB Migrations
+    // 5. Run DB Migrations
     // ----------------------------
     stage('Run Migrations') {
       steps {
@@ -110,15 +97,13 @@ pipeline {
     }
 
     // ----------------------------
-    // 7. Go Live (Same Port Swap)
+    // 6. Go Live (Same Port Swap)
     // ----------------------------
     stage('Go Live') {
       steps {
         sh '''
-        echo "Stopping old live container..."
         docker rm -f ${LIVE_CONTAINER} || true
 
-        echo "Starting new live container on port ${LIVE_PORT}..."
         docker run -d --name ${LIVE_CONTAINER} \
           --add-host=host.docker.internal:host-gateway \
           --add-host=staging_mysql:host-gateway \
@@ -131,15 +116,12 @@ pipeline {
     }
   }
 
-  // ----------------------------
-  // 8. Post Actions
-  // ----------------------------
   post {
     success {
       sh '''
       docker rm -f ${TEST_CONTAINER} || true
       '''
-      echo "✅ DEPLOY SUCCESS — Frontend now uses new backend automatically"
+      echo "✅ DEPLOY SUCCESS"
     }
 
     failure {
