@@ -1,108 +1,151 @@
 pipeline {
-    agent any
+  agent any
 
-    triggers {
-        githubPush()
+  environment {
+    APP_NAME        = "pss-api"
+    LIVE_CONTAINER = "staging_api"
+    TEST_CONTAINER = "staging_api_test"
+
+    LIVE_PORT = "8000"
+    TEST_PORT = "9000"
+
+    HOST_PATH = "/var/www/staging/pssportal-api-backend"
+    ENV_FILE  = "/var/www/staging/pssportal-api-backend/.env"
+    STORAGE   = "/var/www/staging/pssportal-api-backend/storage"
+    BOOTSTRAP= "/var/www/staging/pssportal-api-backend/bootstrap/cache"
+
+    IMAGE_TAG = ""
+  }
+
+  stages {
+
+    // ----------------------------
+    // 1. Checkout Code
+    // ----------------------------
+    stage('Checkout') {
+      steps {
+        checkout scm
+      }
     }
 
-    environment {
-        APP_NAME = "pss-api"
-        CONTAINER_NAME = "staging_api"
-        LIVE_PORT = "8000"
-        TEST_PORT = "8001"
-        BRANCH = "main"
-        ENV_FILE = "/var/www/staging/pssportal-api-backend/.env"
+    // ----------------------------
+    // 2. Prepare Host Storage
+    // ----------------------------
+    stage('Prepare Host Storage') {
+      steps {
+        sh '''
+        echo "Preparing Laravel runtime directories on HOST..."
+
+        mkdir -p ${STORAGE}/framework/views
+        mkdir -p ${STORAGE}/framework/cache
+        mkdir -p ${STORAGE}/framework/sessions
+
+        chown -R www-data:www-data ${STORAGE} ${BOOTSTRAP}
+        chmod -R 775 ${STORAGE} ${BOOTSTRAP}
+        '''
+      }
     }
 
-    stages {
-
-        stage('Checkout') {
-            steps {
-                git branch: "${BRANCH}", url: "https://github.com/aryutechnologies2025/pssportal-api-backend-staging.git"
-                sh 'git log --oneline -1'
-            }
+    // ----------------------------
+    // 3. Build Docker Image
+    // ----------------------------
+    stage('Build Image') {
+      steps {
+        script {
+          IMAGE_TAG = sh(
+            script: "git rev-parse --short HEAD",
+            returnStdout: true
+          ).trim()
         }
 
-        stage('Build Docker Image') {
-            steps {
-                script {
-                    def COMMIT = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
-                    env.IMAGE_TAG = "${APP_NAME}:${COMMIT}"
-                }
-                sh """
-                docker build -t ${IMAGE_TAG} .
-                """
-            }
-        }
-
-        stage('Run New Container (Test Port)') {
-            steps {
-                sh """
-                docker run -d --name ${CONTAINER_NAME}_new \
-                --add-host=host.docker.internal:host-gateway \
-                --add-host=staging_mysql:host-gateway \
-                -p ${TEST_PORT}:80 \
-                -v ${ENV_FILE}:/var/www/html/.env \
-                ${IMAGE_TAG}
-                """
-            }
-        }
-
-        stage('Health Check (Test Port)') {
-            steps {
-                sh """
-                sleep 10
-                curl -f http://localhost:${TEST_PORT}/api/health
-                """
-            }
-        }
-
-        stage('Switch Containers (Go Live)') {
-            steps {
-                sh """
-                echo "Stopping old live container..."
-                docker stop ${CONTAINER_NAME} || true
-                docker rm ${CONTAINER_NAME} || true
-
-                echo "Stopping test container..."
-                docker stop ${CONTAINER_NAME}_new || true
-                docker rm ${CONTAINER_NAME}_new || true
-
-                echo "Starting new live container..."
-                docker run -d --name ${CONTAINER_NAME} \
-                --add-host=host.docker.internal:host-gateway \
-                --add-host=staging_mysql:host-gateway \
-                -p ${LIVE_PORT}:80 \
-                -v ${ENV_FILE}:/var/www/html/.env \
-                ${IMAGE_TAG}
-                """
-            }
-        }
-
-        stage('Clear Cache & Run Migrations') {
-            steps {
-                sh """
-                docker exec ${CONTAINER_NAME} php artisan optimize:clear
-                docker exec ${CONTAINER_NAME} php artisan migrate --force
-                """
-            }
-        }
+        sh '''
+        echo "Building image ${APP_NAME}:${IMAGE_TAG}"
+        docker build -t ${APP_NAME}:${IMAGE_TAG} .
+        '''
+      }
     }
 
-    post {
-        success {
-            echo "✅ DEPLOY SUCCESS"
-            echo "Image deployed: ${IMAGE_TAG}"
-            echo "Live URL: http://localhost:${LIVE_PORT}"
-        }
+    // ----------------------------
+    // 4. Start Test Container
+    // ----------------------------
+    stage('Run Test Container') {
+      steps {
+        sh '''
+        docker rm -f ${TEST_CONTAINER} || true
 
-        failure {
-            echo "❌ DEPLOY FAILED — CLEANING UP"
-            sh """
-            docker stop ${CONTAINER_NAME}_new || true
-            docker rm ${CONTAINER_NAME}_new || true
-            """
-        }
+        docker run -d --name ${TEST_CONTAINER} \
+          --add-host=host.docker.internal:host-gateway \
+          --add-host=staging_mysql:host-gateway \
+          -p ${TEST_PORT}:80 \
+          -v ${ENV_FILE}:/var/www/html/.env \
+          -v ${STORAGE}:/var/www/html/storage \
+          ${APP_NAME}:${IMAGE_TAG}
+        '''
+      }
     }
+
+    // ----------------------------
+    // 5. Health Check
+    // ----------------------------
+    stage('Health Check') {
+      steps {
+        sh '''
+        echo "Waiting for API to boot..."
+        sleep 10
+
+        curl -f http://localhost:${TEST_PORT}/api/health
+        '''
+      }
+    }
+
+    // ----------------------------
+    // 6. Run DB Migrations
+    // ----------------------------
+    stage('Run Migrations') {
+      steps {
+        sh '''
+        docker exec ${TEST_CONTAINER} php artisan migrate --force
+        '''
+      }
+    }
+
+    // ----------------------------
+    // 7. Go Live (Same Port Swap)
+    // ----------------------------
+    stage('Go Live') {
+      steps {
+        sh '''
+        echo "Stopping old live container..."
+        docker rm -f ${LIVE_CONTAINER} || true
+
+        echo "Starting new live container on port ${LIVE_PORT}..."
+        docker run -d --name ${LIVE_CONTAINER} \
+          --add-host=host.docker.internal:host-gateway \
+          --add-host=staging_mysql:host-gateway \
+          -p ${LIVE_PORT}:80 \
+          -v ${ENV_FILE}:/var/www/html/.env \
+          -v ${STORAGE}:/var/www/html/storage \
+          ${APP_NAME}:${IMAGE_TAG}
+        '''
+      }
+    }
+  }
+
+  // ----------------------------
+  // 8. Post Actions
+  // ----------------------------
+  post {
+    success {
+      sh '''
+      docker rm -f ${TEST_CONTAINER} || true
+      '''
+      echo "✅ DEPLOY SUCCESS — Frontend now uses new backend automatically"
+    }
+
+    failure {
+      echo "❌ DEPLOY FAILED — Live container NOT touched"
+      echo "Test container kept for debugging"
+    }
+  }
 }
 
