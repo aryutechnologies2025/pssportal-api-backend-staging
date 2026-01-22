@@ -9,13 +9,15 @@ pipeline {
     LIVE_PORT = "8000"
     TEST_PORT = "9000"
 
-    HOST_PATH = "/var/www/staging/pssportal-api-backend"
-    ENV_FILE  = "/var/www/staging/pssportal-api-backend/.env"
-    STORAGE   = "/var/www/staging/pssportal-api-backend/storage"
+    ENV_FILE = "/var/www/staging/pssportal-api-backend/.env"
+    STORAGE  = "/var/www/staging/pssportal-api-backend/storage"
   }
 
   stages {
 
+    // ----------------------------
+    // 1. Checkout
+    // ----------------------------
     stage('Checkout') {
       steps {
         checkout scm
@@ -23,7 +25,7 @@ pipeline {
     }
 
     // ----------------------------
-    // 1. Ensure Storage Exists
+    // 2. Ensure Storage Exists
     // ----------------------------
     stage('Ensure Storage Structure') {
       steps {
@@ -36,7 +38,7 @@ pipeline {
     }
 
     // ----------------------------
-    // 2. Build Docker Image
+    // 3. Build Docker Image
     // ----------------------------
     stage('Build Image') {
       steps {
@@ -59,7 +61,7 @@ pipeline {
     }
 
     // ----------------------------
-    // 3. Run Test Container
+    // 4. Run Test Container
     // ----------------------------
     stage('Run Test Container') {
       steps {
@@ -78,7 +80,7 @@ pipeline {
     }
 
     // ----------------------------
-    // 4. Run DB Migrations (BEFORE health)
+    // 5. Run DB Migrations
     // ----------------------------
     stage('Run Migrations') {
       steps {
@@ -89,7 +91,7 @@ pipeline {
     }
 
     // ----------------------------
-    // 5. Health Check
+    // 6. Health Check
     // ----------------------------
     stage('Health Check') {
       steps {
@@ -101,26 +103,43 @@ pipeline {
     }
 
     // ----------------------------
-    // 6. Go Live (Safe Swap)
+    // 7. Save Current Live Version (Rollback Memory)
+    // ----------------------------
+    stage('Save Current Live Version') {
+      steps {
+        script {
+          def oldImage = sh(
+            script: "docker inspect ${LIVE_CONTAINER} --format='{{.Config.Image}}' || true",
+            returnStdout: true
+          ).trim()
+
+          if (oldImage) {
+            env.OLD_IMAGE = oldImage
+            echo "Saved old image: ${env.OLD_IMAGE}"
+          } else {
+            echo "No old live container found"
+          }
+        }
+      }
+    }
+
+    // ----------------------------
+    // 8. Go Live (Safe, No Port Conflict)
     // ----------------------------
     stage('Go Live') {
       steps {
         sh '''
-        echo "Starting new live container..."
+        echo "Stopping old live container..."
+        docker rm -f ${LIVE_CONTAINER} || true
 
-        docker run -d --name ${LIVE_CONTAINER}_new \
+        echo "Starting new live container..."
+        docker run -d --name ${LIVE_CONTAINER} \
           --add-host=host.docker.internal:host-gateway \
           --add-host=staging_mysql:host-gateway \
           -p ${LIVE_PORT}:80 \
           -v ${ENV_FILE}:/var/www/html/.env \
           -v ${STORAGE}:/var/www/html/storage \
           ${APP_NAME}:${IMAGE_TAG}
-
-        echo "Stopping old live container..."
-        docker rm -f ${LIVE_CONTAINER} || true
-
-        echo "Renaming new container..."
-        docker rename ${LIVE_CONTAINER}_new ${LIVE_CONTAINER}
         '''
       }
     }
@@ -133,8 +152,24 @@ pipeline {
     }
 
     failure {
-      echo "❌ DEPLOY FAILED — Live container NOT touched"
-      echo "Test container kept for debugging"
+      echo "❌ DEPLOY FAILED — Attempting rollback..."
+
+      sh '''
+      if [ ! -z "$OLD_IMAGE" ]; then
+        echo "Restoring old version: $OLD_IMAGE"
+        docker rm -f ${LIVE_CONTAINER} || true
+
+        docker run -d --name ${LIVE_CONTAINER} \
+          --add-host=host.docker.internal:host-gateway \
+          --add-host=staging_mysql:host-gateway \
+          -p ${LIVE_PORT}:80 \
+          -v ${ENV_FILE}:/var/www/html/.env \
+          -v ${STORAGE}:/var/www/html/storage \
+          $OLD_IMAGE
+      else
+        echo "No old image found — rollback not possible"
+      fi
+      '''
     }
   }
 }
