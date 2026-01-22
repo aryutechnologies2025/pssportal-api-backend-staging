@@ -40,19 +40,23 @@ pipeline {
     // ----------------------------
     // 2. Build Docker Image
     // ----------------------------
-    stage('Build Image') {
-      steps {
-        script {
-          IMAGE_TAG = sh(
-            script: "git rev-parse --short HEAD",
-            returnStdout: true
-          ).trim()
-        }
-        sh '''
-        docker build -t ${APP_NAME}:${IMAGE_TAG} .
-        '''
-      }
+stage('Build Image') {
+  steps {
+    script {
+      def tag = sh(
+        script: "git rev-parse --short HEAD",
+        returnStdout: true
+      ).trim()
+
+      env.IMAGE_TAG = tag
+      echo "Using image tag: ${env.IMAGE_TAG}"
     }
+
+    sh '''
+    docker build -t ${APP_NAME}:${IMAGE_TAG} .
+    '''
+  }
+}
 
     // ----------------------------
     // 3. Run Test Container
