@@ -12,8 +12,6 @@ pipeline {
     HOST_PATH = "/var/www/staging/pssportal-api-backend"
     ENV_FILE  = "/var/www/staging/pssportal-api-backend/.env"
     STORAGE   = "/var/www/staging/pssportal-api-backend/storage"
-
-    IMAGE_TAG = ""
   }
 
   stages {
@@ -25,7 +23,7 @@ pipeline {
     }
 
     // ----------------------------
-    // 1. Ensure Storage Exists (NO PERMISSION CHANGES)
+    // 1. Ensure Storage Exists
     // ----------------------------
     stage('Ensure Storage Structure') {
       steps {
@@ -40,23 +38,25 @@ pipeline {
     // ----------------------------
     // 2. Build Docker Image
     // ----------------------------
-stage('Build Image') {
-  steps {
-    script {
-      def tag = sh(
-        script: "git rev-parse --short HEAD",
-        returnStdout: true
-      ).trim()
+    stage('Build Image') {
+      steps {
+        script {
+          def tag = sh(
+            script: "git rev-parse --short HEAD",
+            returnStdout: true
+          ).trim()
 
-      env.IMAGE_TAG = tag
-      echo "Using image tag: ${env.IMAGE_TAG}"
+          if (!tag) {
+            error("IMAGE_TAG is empty — git commit hash not found")
+          }
+
+          env.IMAGE_TAG = tag
+          echo "Using image tag: ${env.IMAGE_TAG}"
+        }
+
+        sh "docker build -t ${APP_NAME}:${IMAGE_TAG} ."
+      }
     }
-
-    sh '''
-    docker build -t ${APP_NAME}:${IMAGE_TAG} .
-    '''
-  }
-}
 
     // ----------------------------
     // 3. Run Test Container
@@ -78,7 +78,18 @@ stage('Build Image') {
     }
 
     // ----------------------------
-    // 4. Health Check
+    // 4. Run DB Migrations (BEFORE health)
+    // ----------------------------
+    stage('Run Migrations') {
+      steps {
+        sh '''
+        docker exec ${TEST_CONTAINER} php artisan migrate --force
+        '''
+      }
+    }
+
+    // ----------------------------
+    // 5. Health Check
     // ----------------------------
     stage('Health Check') {
       steps {
@@ -90,31 +101,26 @@ stage('Build Image') {
     }
 
     // ----------------------------
-    // 5. Run DB Migrations
-    // ----------------------------
-    stage('Run Migrations') {
-      steps {
-        sh '''
-        docker exec ${TEST_CONTAINER} php artisan migrate --force
-        '''
-      }
-    }
-
-    // ----------------------------
-    // 6. Go Live (Same Port Swap)
+    // 6. Go Live (Safe Swap)
     // ----------------------------
     stage('Go Live') {
       steps {
         sh '''
-        docker rm -f ${LIVE_CONTAINER} || true
+        echo "Starting new live container..."
 
-        docker run -d --name ${LIVE_CONTAINER} \
+        docker run -d --name ${LIVE_CONTAINER}_new \
           --add-host=host.docker.internal:host-gateway \
           --add-host=staging_mysql:host-gateway \
           -p ${LIVE_PORT}:80 \
           -v ${ENV_FILE}:/var/www/html/.env \
           -v ${STORAGE}:/var/www/html/storage \
           ${APP_NAME}:${IMAGE_TAG}
+
+        echo "Stopping old live container..."
+        docker rm -f ${LIVE_CONTAINER} || true
+
+        echo "Renaming new container..."
+        docker rename ${LIVE_CONTAINER}_new ${LIVE_CONTAINER}
         '''
       }
     }
@@ -122,9 +128,7 @@ stage('Build Image') {
 
   post {
     success {
-      sh '''
-      docker rm -f ${TEST_CONTAINER} || true
-      '''
+      sh 'docker rm -f ${TEST_CONTAINER} || true'
       echo "✅ DEPLOY SUCCESS"
     }
 
