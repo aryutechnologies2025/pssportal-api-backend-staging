@@ -171,24 +171,29 @@ class ContactCandidateController extends Controller
 
     public function show($id)
     {
+        // Load employee with documents
         $emp = ContractEmployee::with('documents')->where('id', $id)
             ->where('is_deleted', 0)
             ->firstOrFail();
 
-        $notes = collect();
+        $notes = collect(); // Always start with empty collection
 
         /**
          * ✅ INTERVIEW STATUS NOTES
          */
         if (in_array($emp->interview_status, ['rejected', 'hold', 'waiting'])) {
-            $interviewNote = NoteAttachment::where('parent_id', $emp->id)
-                ->where('parent_type', 'contract_emp')
-                ->whereIn('notes_status', ['rejected', 'hold', 'waiting'])
-                ->latest('id') // OR created_at
-                ->first();
 
-            if ($interviewNote) {
-                $notes->push($interviewNote);
+            // Only query if column exists
+            if (\Schema::hasColumn('note_attachments', 'notes_status')) {
+                $interviewNote = NoteAttachment::where('parent_id', $emp->id)
+                    ->where('parent_type', 'contract_emp')
+                    ->whereIn('notes_status', ['rejected', 'hold', 'waiting'])
+                    ->latest('id')
+                    ->first();
+
+                if ($interviewNote) {
+                    $notes->push($interviewNote);
+                }
             }
         }
 
@@ -196,19 +201,22 @@ class ContactCandidateController extends Controller
          * ✅ JOINING STATUS NOTES
          */
         if ($emp->joining_status === 'not_joined') {
-            $joiningNote = NoteAttachment::where('parent_id', $emp->id)
-                ->where('parent_type', 'contract_emp')
-                ->where('notes_status', 'not_joined')
-                ->latest('id')
-                ->first();
 
-            if ($joiningNote) {
-                $notes->push($joiningNote);
+            if (\Schema::hasColumn('note_attachments', 'notes_status')) {
+                $joiningNote = NoteAttachment::where('parent_id', $emp->id)
+                    ->where('parent_type', 'contract_emp')
+                    ->where('notes_status', 'not_joined')
+                    ->latest('id')
+                    ->first();
+
+                if ($joiningNote) {
+                    $notes->push($joiningNote);
+                }
             }
         }
 
-        // Attach filtered notes manually
-        $emp->setRelation('notes', $notes);
+        // Attach filtered notes (always returns array)
+        $emp->notes = $notes->values(); // ->values() to reset keys
 
         return response()->json([
             'success' => true,

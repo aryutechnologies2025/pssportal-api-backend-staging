@@ -17,9 +17,9 @@ class PssEmployeeAttendance extends Model
         'attendance_time',
         'shift_id',
         'reason',
-        'photo',
-        'latitude',
-        'longitude',
+        // 'photo',
+        // 'latitude',
+        // 'longitude',
     ];
 
 

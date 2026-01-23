@@ -5,6 +5,9 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\File;
 use App\Models\Setting;
+// use phpseclib\Crypt\Hash;
+use Illuminate\Support\Facades\Hash;
+
 class SettingController extends Controller
 {
     /**
@@ -12,7 +15,7 @@ class SettingController extends Controller
      */
     public function store(Request $request)
     {
-        
+
         // Only ONE settings row
         $setting = Setting::first();
 
@@ -73,6 +76,7 @@ class SettingController extends Controller
      */
     public function index()
     {
+        // dd(Hash::make('pss@2026'));
         return response()->json([
             'success' => true,
             'data'    => Setting::first()

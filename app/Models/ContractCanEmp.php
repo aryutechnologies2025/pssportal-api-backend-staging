@@ -31,7 +31,15 @@ class ContractCanEmp extends Model
         'employee_id',
         'esic', //
         'profile_picture',
-        'account_number'
+        'account_number',
+        'emr_contact_number',
+        'marital_status',
+        'current_address',
+        'pan_number',
+        'city',
+        'state',
+        'branch_name',
+        'bank_name',
     ];
 
     public function company()

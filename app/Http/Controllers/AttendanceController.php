@@ -375,11 +375,14 @@ class AttendanceController extends Controller
                     continue;
                 }
 
+
+                $attendance_date  = $this->parseDate($data['attendance_date'] ?? null);
+
                 // 2️⃣ Find or create attendance (company + date)
                 $attendance = Attendance::firstOrCreate(
                     [
                         'company_id'       => $request->company_id,
-                        'attendance_date'  => date('Y-m-d', strtotime($data['attendance_date'])),
+                        'attendance_date'  => $attendance_date,
                         'is_deleted'       => 0
                     ],
                     [
@@ -437,6 +440,36 @@ class AttendanceController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+     private function parseDate($date)
+    {
+        if (empty($date)) {
+            return null;
+        }
+
+        $formats = [
+            'd-m-Y',
+            'd/m/Y',
+            'Y-m-d',
+            'Y/m/d',
+            'd.m.Y',
+        ];
+
+        foreach ($formats as $format) {
+            try {
+                return Carbon::createFromFormat($format, trim($date))->format('Y-m-d');
+            } catch (\Exception $e) {
+                // try next
+            }
+        }
+
+        // Final fallback
+        try {
+            return Carbon::parse($date)->format('Y-m-d');
+        } catch (\Exception $e) {
+            return null;
         }
     }
 }
