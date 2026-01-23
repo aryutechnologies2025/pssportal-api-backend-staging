@@ -311,6 +311,12 @@ Route::prefix('employee')->group(function () {
             });
         });
 
+         Route::controller(WorkReportController::class)->group(function () {
+            Route::prefix('work-report')->group(function () {
+                Route::get('/', 'employeeWorkReport');
+            });
+        });
+
         Route::get('activity', [ActivitiesController::class, 'empActivities']);
 
         // Finance

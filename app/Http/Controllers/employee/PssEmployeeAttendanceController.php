@@ -277,22 +277,22 @@ class PssEmployeeAttendanceController extends Controller
 
         // $photoPath = null;
 
-        if ($request->hasFile('profile_picture')) {
+        // if ($request->hasFile('profile_picture')) {
 
-            $photo = $request->file('profile_picture'); // ✅ UploadedFile
+        //     $photo = $request->file('profile_picture'); // ✅ UploadedFile
 
-            $photoDir = public_path('uploads/attendance/selfies');
-            if (!file_exists($photoDir)) {
-                mkdir($photoDir, 0755, true);
-            }
+        //     $photoDir = public_path('uploads/attendance/selfies');
+        //     if (!file_exists($photoDir)) {
+        //         mkdir($photoDir, 0755, true);
+        //     }
 
-            $photoName = now()->format('YmdHis') . '_' . rand(10000, 99999) . '.' .
-                $photo->getClientOriginalExtension();
+        //     $photoName = now()->format('YmdHis') . '_' . rand(10000, 99999) . '.' .
+        //         $photo->getClientOriginalExtension();
 
-            $photo->move($photoDir, $photoName);
+        //     $photo->move($photoDir, $photoName);
 
-            $photoPath = 'uploads/attendance/selfies/' . $photoName;
-        }
+        //     $photoPath = 'uploads/attendance/selfies/' . $photoName;
+        // }
 
         // 🔹 Save attendance
         PssEmployeeAttendance::create([
@@ -301,9 +301,9 @@ class PssEmployeeAttendanceController extends Controller
             'attendance_time' => $nowTime,
             'shift_id'        => $shiftId,
             'reason'          => $reason,
-            'photo'           => $photoPath,
-            'latitude'        => $request->latitude,
-            'longitude'       => $request->longitude,
+            // 'photo'           => $photoPath,
+            // 'latitude'        => $request->latitude,
+            // 'longitude'       => $request->longitude,
         ]);
 
         return response()->json([

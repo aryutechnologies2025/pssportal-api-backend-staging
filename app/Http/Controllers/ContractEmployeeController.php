@@ -460,11 +460,103 @@ class ContractEmployeeController extends Controller
         return response()->json(['success' => true, 'message' => 'Deleted successfully']);
     }
 
+    // public function import(Request $request)
+    // {
+
+    //     // dd($request->all());
+    //     // 1️⃣ Validate CSV file only
+    //     $validator = Validator::make($request->all(), [
+    //         'file' => 'required|file|mimes:csv,txt'
+    //     ]);
+
+    //     if ($validator->fails()) {
+    //         return response()->json([
+    //             'success' => false,
+    //             'message' => 'Invalid file format. Only CSV allowed.',
+    //             'errors'  => $validator->errors()
+    //         ], 422);
+    //     }
+
+    //     $file = $request->file('file');
+    //     $handle = fopen($file->getRealPath(), 'r');
+
+    //     $header = fgetcsv($handle); // CSV header
+    //     $inserted = 0;
+    //     $skipped  = 0;
+    //     $errors   = [];
+
+    //     while (($row = fgetcsv($handle)) !== false) {
+
+    //         $data = array_combine($header, $row);
+
+    //         $exists = ContractCanEmp::where('aadhar_number', $data['aadhar_number'])
+    //             ->where('is_deleted', 0)
+    //             ->exists();
+
+    //         if ($exists) {
+    //             $skipped++;
+    //             continue;
+    //         }
+
+
+    //         //    dd($aadhar);
+    //         /* 🔹 INSERT */
+
+    //         $date_of_birth = $this->parseDate($data['date_of_birth'] ?? null);
+    //         $joining_date  = $this->parseDate($data['joining_date'] ?? null);
+
+    //         // ✅ Default: take employee_id from CSV if exists
+    //         $employee_id = $data['employee_id'] ?? null;
+
+    //         // ✅ Auto-generate ONLY if CSV employee_id is empty
+    //         if (empty($employee_id) && $joining_date && $request->company_id) {
+    //             $employee_id = $this->generateEmployeeId(
+    //                 $request->company_id,
+    //                 $joining_date
+    //             );
+    //         }
+
+
+    //         ContractCanEmp::create([
+    //             'employee_id'      => $employee_id,
+    //             'name'             => $data['name'] ?? null,
+    //             'date_of_birth'    => $date_of_birth,
+    //             'father_name'      => $data['father_name'] ?? null,
+    //             'joining_date'     => $joining_date,
+    //             'aadhar_number'    => $data['aadhar_number'] ?? null,
+    //             'gender'           => $data['gender'] ?? null,
+    //             'address'          => $data['address'] ?? null,
+    //             'phone_number'     => $data['phone_number'] ?? null,
+    //             'acc_no'           => $data['acc_no'] ?? null,
+    //             'account_number'   => $data['account_number'] ?? null,
+    //             'ifsc_code'        => $data['ifsc_code'] ?? null,
+    //             'uan_number'       => $data['uan_number'] ?? null,
+    //             'esic'             => $data['esic'] ?? null,
+
+    //             'company_id'       => $request->company_id ?? null,
+    //             'status'           => 1,
+    //             'is_deleted'       => 0,
+    //             'created_by'       => $request->created_by ?? null,
+    //             'role_id'       => $request->role_id ?? null,
+    //         ]);
+
+    //         $inserted++;
+    //     }
+
+    //     fclose($handle);
+
+    //     return response()->json([
+    //         'success'   => true,
+    //         'message'   => 'CSV import completed',
+    //         'inserted'  => $inserted,
+    //         'skipped'   => $skipped,
+    //         'errors'    => $errors // optional
+    //     ], 200);
+    // }
+
     public function import(Request $request)
     {
-
-        // dd($request->all());
-        // 1️⃣ Validate CSV file only
+        // 1️⃣ Validate CSV file
         $validator = Validator::make($request->all(), [
             'file' => 'required|file|mimes:csv,txt'
         ]);
@@ -480,35 +572,43 @@ class ContractEmployeeController extends Controller
         $file = $request->file('file');
         $handle = fopen($file->getRealPath(), 'r');
 
-        $header = fgetcsv($handle); // CSV header
+        $header = fgetcsv($handle);
         $inserted = 0;
         $skipped  = 0;
         $errors   = [];
 
         while (($row = fgetcsv($handle)) !== false) {
 
-            $data = array_combine($header, $row);
-
-            $exists = ContractCanEmp::where('aadhar_number', $data['aadhar_number'])
-                ->where('is_deleted', 0)
-                ->exists();
-
-            if ($exists) {
-                $skipped++;
+            // ⚠️ Skip broken rows
+            if (count($header) !== count($row)) {
+                $errors[] = ['row' => $row, 'error' => 'Column mismatch'];
                 continue;
             }
 
+            $data = array_combine($header, $row);
 
-            //    dd($aadhar);
-            /* 🔹 INSERT */
+            // 🔒 Safe read
+            $aadhar = $this->csvValue($data, 'aadhar_number');
 
-            $date_of_birth = $this->parseDate($data['date_of_birth'] ?? null);
-            $joining_date  = $this->parseDate($data['joining_date'] ?? null);
+            // 🔁 Duplicate check only if aadhar exists
+            if ($aadhar) {
+                $exists = ContractCanEmp::where('aadhar_number', $aadhar)
+                    ->where('is_deleted', 0)
+                    ->exists();
 
-            // ✅ Default: take employee_id from CSV if exists
-            $employee_id = $data['employee_id'] ?? null;
+                if ($exists) {
+                    $skipped++;
+                    continue;
+                }
+            }
 
-            // ✅ Auto-generate ONLY if CSV employee_id is empty
+            /* 🔹 Dates */
+            $date_of_birth = $this->parseDate($this->csvValue($data, 'date_of_birth'));
+            $joining_date  = $this->parseDate($this->csvValue($data, 'joining_date'));
+
+            /* 🔹 Employee ID */
+            $employee_id = $this->csvValue($data, 'employee_id');
+
             if (empty($employee_id) && $joining_date && $request->company_id) {
                 $employee_id = $this->generateEmployeeId(
                     $request->company_id,
@@ -516,28 +616,36 @@ class ContractEmployeeController extends Controller
                 );
             }
 
-
+            /* 🔹 Insert */
             ContractCanEmp::create([
-                'employee_id'      => $employee_id,
-                'name'             => $data['name'] ?? null,
-                'date_of_birth'    => $date_of_birth,
-                'father_name'      => $data['father_name'] ?? null,
-                'joining_date'     => $joining_date,
-                'aadhar_number'    => $data['aadhar_number'] ?? null,
-                'gender'           => $data['gender'] ?? null,
-                'address'          => $data['address'] ?? null,
-                'phone_number'     => $data['phone_number'] ?? null,
-                'acc_no'           => $data['acc_no'] ?? null,
-                'account_number'   => $data['account_number'] ?? null,
-                'ifsc_code'        => $data['ifsc_code'] ?? null,
-                'uan_number'       => $data['uan_number'] ?? null,
-                'esic'             => $data['esic'] ?? null,
+                'employee_id'    => $employee_id,
+                'name'           => $this->csvValue($data, 'name'),
+                'date_of_birth'  => $date_of_birth,
+                'father_name'    => $this->csvValue($data, 'father_name'),
+                'joining_date'   => $joining_date,
+                'aadhar_number'  => $aadhar,
+                'gender'         => $this->csvValue($data, 'gender'),
+                'address'        => $this->csvValue($data, 'address'),
+                'phone_number'   => $this->csvValue($data, 'phone_number'),
+                'acc_no'         => $this->csvValue($data, 'acc_no'),
+                'account_number' => $this->csvValue($data, 'account_number'),
+                'ifsc_code'      => $this->csvValue($data, 'ifsc_code'),
+                'uan_number'     => $this->csvValue($data, 'uan_number'),
+                'esic'           => $this->csvValue($data, 'esic'),
+                'emr_contact_number' => $this->csvValue($data, 'emr_contact_number'),
+                'marital_status'     => $this->csvValue($data, 'marital_status'),
+                'current_address'    => $this->csvValue($data, 'current_address'),
+                'pan_number'     => $this->csvValue($data, 'pan_number'),
+                'city'     => $this->csvValue($data, 'city'),
+                'state'     => $this->csvValue($data, 'state'),
+                'branch_name'     => $this->csvValue($data, 'branch_name'),
+                'bank_name'     => $this->csvValue($data, 'bank_name'),
 
-                'company_id'       => $request->company_id ?? null,
-                'status'           => 1,
-                'is_deleted'       => 0,
-                'created_by'       => $request->created_by ?? null,
-                'role_id'       => $request->role_id ?? null,
+                'company_id'     => $request->company_id,
+                'status'         => 1,
+                'is_deleted'     => 0,
+                'created_by'     => $request->created_by,
+                'role_id'        => $request->role_id,
             ]);
 
             $inserted++;
@@ -546,13 +654,23 @@ class ContractEmployeeController extends Controller
         fclose($handle);
 
         return response()->json([
-            'success'   => true,
-            'message'   => 'CSV import completed',
-            'inserted'  => $inserted,
-            'skipped'   => $skipped,
-            'errors'    => $errors // optional
+            'success'  => true,
+            'message'  => 'CSV import completed',
+            'inserted' => $inserted,
+            'skipped'  => $skipped,
+            'errors'   => $errors
         ], 200);
     }
+
+
+    private function csvValue(array $data, string $key)
+    {
+        return array_key_exists($key, $data) && $data[$key] !== ''
+            ? $data[$key]
+            : null;
+    }
+
+
 
     private function generateEmployeeId($company_id, $joining_date)
     {

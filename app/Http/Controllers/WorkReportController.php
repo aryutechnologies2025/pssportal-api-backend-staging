@@ -119,4 +119,37 @@ class WorkReportController extends Controller
             'data' => $reports
         ]);
     }
+
+    public function employeeWorkReport(Request $request)
+    {
+        $query = WorkReport::with('employee')->where('created_by', $request->employee_id);
+
+        if ($request->from_date && $request->to_date) {
+            $query->whereBetween('report_date', [
+                $request->from_date,
+                $request->to_date
+            ]);
+        } elseif ($request->date) {
+            $query->whereDate('report_date', $request->date);
+        }
+
+        // if ($request->employee_id) {
+        //     $query->where('created_by', $request->employee_id);
+        // }
+
+        $reports = $query->latest()->get();
+
+        $pssemployees = Employee::where('status', '1')
+            ->where('is_deleted', 0)
+            ->where('id', '!=', 1)
+            // ->where('job_form_referal', 1)
+            ->select('full_name', 'id')
+            ->get();
+
+        return response()->json([
+            'status' => true,
+            'data' => $reports,
+            'employees' => $pssemployees
+        ]);
+    }
 }
