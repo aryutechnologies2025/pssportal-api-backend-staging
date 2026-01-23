@@ -89,7 +89,7 @@ pipeline {
         docker rm -f ${TEST_CONTAINER} || true
 
         docker run -d --name ${TEST_CONTAINER} \
-          --add-host=host.docker.internal:host-gateway \
+          --network staging_net
           --add-host=staging_mysql:host-gateway \
           -p ${TEST_PORT}:80 \
           -v ${ENV_FILE}:/var/www/html/.env \
@@ -154,7 +154,7 @@ pipeline {
 
         echo "Starting new live container..."
         docker run -d --name ${LIVE_CONTAINER} \
-          --add-host=host.docker.internal:host-gateway \
+          --network staging_net
           --add-host=staging_mysql:host-gateway \
           -p ${LIVE_PORT}:80 \
           -v ${ENV_FILE}:/var/www/html/.env \
@@ -180,7 +180,7 @@ pipeline {
         docker rm -f ${LIVE_CONTAINER} || true
 
         docker run -d --name ${LIVE_CONTAINER} \
-          --add-host=host.docker.internal:host-gateway \
+          --network staging_net
           --add-host=staging_mysql:host-gateway \
           -p ${LIVE_PORT}:80 \
           -v ${ENV_FILE}:/var/www/html/.env \
