@@ -13,7 +13,7 @@ class BoardingPointController extends Controller
     /** List */
     public function list(Request $request)
     {
-        $boardingPointsQuery = BoardingPoint::where('is_deleted', 0)
+        $boardingPointsQuery = BoardingPoint::with('company')->where('is_deleted', 0)
             ->select('id', 'point_name', 'company_id', 'status');
 
         // Apply company filter BEFORE get()
@@ -25,14 +25,14 @@ class BoardingPointController extends Controller
 
         $pssCompanies = Company::where('status', 1)
             ->where('is_deleted', 0)
-            ->select('id', 'name')
+            ->select('id', 'company_name')
             ->get();
 
         return response()->json([
             'status'     => true,
             'message'    => 'Boarding points fetched successfully',
             'data'       => $boardingPoints,
-            'psscompany' => $pssCompanies,
+            'companies' => $pssCompanies,
         ]);
     }
 
@@ -58,7 +58,7 @@ class BoardingPointController extends Controller
     /** Edit form */
     public function edit_form($id)
     {
-        $boardingPoint = BoardingPoint::findOrFail($id);
+        $boardingPoint = BoardingPoint::with('company')->findOrFail($id);
 
         return response()->json([
             'status' => true,

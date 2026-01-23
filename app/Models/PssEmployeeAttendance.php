@@ -20,6 +20,11 @@ class PssEmployeeAttendance extends Model
         'photo',
         'latitude',
         'longitude',
+        'location_details'
+    ];
+
+    protected $casts = [
+        'location_details' => 'array',
     ];
 
 
