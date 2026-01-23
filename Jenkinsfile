@@ -2,201 +2,60 @@ pipeline {
   agent any
 
   environment {
-    APP_NAME        = "pss-api"
-    LIVE_CONTAINER = "staging_api"
-    TEST_CONTAINER = "staging_api_test"
-
-    LIVE_PORT = "8000"
-    TEST_PORT = "9000"
-
     SERVER_PATH = "/var/www/staging/pssportal-api-backend"
-    ENV_FILE   = "/var/www/staging/pssportal-api-backend/.env"
-    STORAGE    = "/var/www/staging/pssportal-api-backend/storage"
-
+    LIVE_CONTAINER = "staging_api"
+    LIVE_PORT = "8000"
     GIT_BRANCH = "main"
-    SERVER_IP = "127.0.0.1"
   }
 
   stages {
 
-    // ----------------------------
-    // 1. Checkout (Jenkins workspace)
-    // ----------------------------
-    stage('Checkout') {
-      steps {
-        checkout scm
-        sh 'git rev-parse HEAD'
-      }
-    }
-
-    // ----------------------------
-    // 2. Update Server Repo (CRITICAL FIX)
-    // ----------------------------
+    // 1. Pull latest code to server
     stage('Update Server Code') {
       steps {
         sh '''
-        echo "Updating server code locally..."
-        cd /var/www/staging/pssportal-api-backend &&
-        git fetch origin &&
-        git reset --hard origin/main &&
+        set -e
+        echo "Updating server repo..."
+        cd ${SERVER_PATH}
+
+        git fetch origin
+        git reset --hard origin/${GIT_BRANCH}
+
+        echo "Current commit:"
         git rev-parse HEAD
         '''
       }
     }
- 
-    // ----------------------------
-    // 3. Ensure Storage Exists
-    // ----------------------------
-    stage('Ensure Storage Structure') {
-      steps {
-        sh '''
-        mkdir -p ${STORAGE}/framework/views
-        mkdir -p ${STORAGE}/framework/cache
-        mkdir -p ${STORAGE}/framework/sessions
-        '''
-      }
-    }
 
-    // ----------------------------
-    // 4. Build Docker Image
-    // ----------------------------
-    stage('Build Image') {
-      steps {
-        script {
-          def tag = sh(
-            script: "git rev-parse --short HEAD",
-            returnStdout: true
-          ).trim()
-
-          if (!tag) {
-            error("IMAGE_TAG is empty — git commit hash not found")
-          }
-
-          env.IMAGE_TAG = tag
-          echo "Using image tag: ${env.IMAGE_TAG}"
-        }
-
-        sh "docker build -t ${APP_NAME}:${IMAGE_TAG} ."
-      }
-    }
-
-    // ----------------------------
-    // 5. Run Test Container
-    // ----------------------------
-    stage('Run Test Container') {
+    // 2. Clear Laravel cache (NO MIGRATION)
+    stage('Clear App Cache') {
       steps {
         sh '''
         set -e
-
-        docker rm -f ${TEST_CONTAINER} || true
-
-        docker run -d --name ${TEST_CONTAINER} \
-        --network staging_net \
-        --add-host=host.docker.internal:host-gateway \
-        -p ${TEST_PORT}:80 \
-        -v ${ENV_FILE}:/var/www/html/.env \
-        -v ${STORAGE}:/var/www/html/storage \
-        ${APP_NAME}:${IMAGE_TAG}
+        echo "Clearing Laravel cache..."
+        docker exec ${LIVE_CONTAINER} php artisan optimize:clear
         '''
       }
     }
 
-    // ----------------------------
-    // 6. Run DB Migrations
-    // ----------------------------
-    stage('Run Migrations') {
-      steps {
-        sh '''
-        docker exec ${TEST_CONTAINER} php artisan migrate --force
-        '''
-      }
-    }
-
-    // ----------------------------
-    // 7. Health Check
-    // ----------------------------
+    // 3. Health Check
     stage('Health Check') {
       steps {
         sh '''
-        sleep 10
-        curl -f http://localhost:${TEST_PORT}/api/health
-        '''
-      }
-    }
-
-    // ----------------------------
-    // 8. Save Current Live Version
-    // ----------------------------
-    stage('Save Current Live Version') {
-      steps {
-        script {
-          def oldImage = sh(
-            script: "docker inspect ${LIVE_CONTAINER} --format='{{.Config.Image}}' || true",
-            returnStdout: true
-          ).trim()
-
-          if (oldImage) {
-            env.OLD_IMAGE = oldImage
-            echo "Saved old image: ${env.OLD_IMAGE}"
-          } else {
-            echo "No old live container found"
-          }
-        }
-      }
-    }
-
-    // ----------------------------
-    // 9. Go Live
-    // ----------------------------
-    stage('Go Live') {
-      steps {
-        sh '''
         set -e
-
-        echo "Stopping old live container..."
-        docker rm -f ${LIVE_CONTAINER} || true
-
-        echo "Starting new live container..."
-        docker run -d --name ${LIVE_CONTAINER} \
-        --network staging_net \
-        --add-host=host.docker.internal:host-gateway \
-        -p ${LIVE_PORT}:80 \
-        -v ${ENV_FILE}:/var/www/html/.env \
-        -v ${STORAGE}:/var/www/html/storage \
-        ${APP_NAME}:${IMAGE_TAG}
+        sleep 5
+        curl -f http://localhost:${LIVE_PORT}/api/health
         '''
       }
     }
-  } 
+  }
 
   post {
     success {
-      sh 'docker rm -f ${TEST_CONTAINER} || true'
-      echo "✅ DEPLOY SUCCESS"
+      echo "✅ STAGING FILE DEPLOY SUCCESS"
     }
-
     failure {
-      echo "❌ DEPLOY FAILED — Attempting rollback..."
-
-      sh '''
-      
-      if [ ! -z "$OLD_IMAGE" ]; then
-        echo "Restoring old version: $OLD_IMAGE"
-        set -e
-        docker rm -f ${LIVE_CONTAINER} || true
-
-        docker run -d --name ${LIVE_CONTAINER} \
-                  --network staging_net \
-                  --add-host=host.docker.internal:host-gateway \
-                  -p ${LIVE_PORT}:80 \
-                  -v ${ENV_FILE}:/var/www/html/.env \
-                  -v ${STORAGE}:/var/www/html/storage \
-                  $OLD_IMAGE
-
-      else
-        echo "No old image found — rollback not possible"
-      fi
-      '''
+      echo "❌ STAGING DEPLOY FAILED — CHECK SERVER LOGS"
     }
   }
 }
