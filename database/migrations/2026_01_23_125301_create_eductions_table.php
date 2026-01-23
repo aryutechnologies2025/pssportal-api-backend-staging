@@ -16,7 +16,6 @@ return new class extends Migration
             $table->string('eduction_name');
             $table->boolean('status')->default(1);
             $table->boolean('is_deleted')->default(0);
-
             $table->string('created_by')->nullable();
             $table->string('updated_by')->nullable();
             $table->timestamps();
