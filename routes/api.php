@@ -33,6 +33,7 @@ use App\Http\Controllers\HolidayController;
 use App\Http\Controllers\FinanceController;
 use App\Http\Controllers\BoardingPointController;
 use App\Http\Controllers\EductionController;
+use App\Http\Controllers\AnnouncementController;
 /*
 |--------------------------------------------------------------------------
 | API Routes
@@ -308,6 +309,17 @@ Route::middleware('static.auth')->group(function () {
             Route::post('/create', 'insert')->name('admin.eduction_insert');
             Route::post('/update/{id}', 'update')->name('admin.eduction_update');
             Route::delete('/delete', 'delete')->name('admin.eduction_delete');
+        });
+    });
+
+     //announcement
+    Route::controller(AnnouncementController::class)->group(function () {
+        Route::prefix('announcement')->group(function () {
+            Route::get('/', 'list')->name('admin.announcement_list');
+            Route::get('/edit/{id}', 'show')->name('admin.announcement_show');
+            Route::post('/create', 'insert')->name('admin.announcement_insert');
+            Route::post('/update/{id}', 'update')->name('admin.announcement_update');
+            Route::delete('/delete', 'delete')->name('admin.announcement_delete');
         });
     });
 });

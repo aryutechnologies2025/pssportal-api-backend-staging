@@ -26,23 +26,6 @@ class EductionController extends Controller
     /** Insert */
     public function insert(Request $request)
     {
-        $validator = Validator::make($request->all(), [
-            'eduction_name' => [
-                'required',
-                Rule::unique('eductions')
-                    ->where(fn ($q) => $q->where('is_deleted', 0)),
-            ],
-            'status' => 'required|in:0,1',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'status' => false,
-                'message' => 'Validation error',
-                'errors' => $validator->errors(),
-            ], 422);
-        }
-
         $education = Eductions::create([
             'eduction_name' => $request->eduction_name,
             'status'        => $request->status,
@@ -71,24 +54,6 @@ class EductionController extends Controller
     /** Update */
     public function update(Request $request, $id)
     {
-        $validator = Validator::make($request->all(), [
-            'eduction_name' => [
-                'required',
-                Rule::unique('eductions')
-                    ->where(fn ($q) => $q->where('is_deleted', 0))
-                    ->ignore($id),
-            ],
-            'status' => 'required|in:0,1',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'status' => false,
-                'message' => 'Validation error',
-                'errors' => $validator->errors(),
-            ], 422);
-        }
-
         $education = Eductions::findOrFail($id);
         $education->update([
             'eduction_name' => $request->eduction_name,

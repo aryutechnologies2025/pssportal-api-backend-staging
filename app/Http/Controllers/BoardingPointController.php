@@ -11,11 +11,17 @@ use Illuminate\Validation\Rule;
 class BoardingPointController extends Controller
 {
     /** List */
-    public function list()
+    public function list(Request $request)
     {
-        $boardingPoints = BoardingPoint::where('is_deleted', 0)
-            ->select('id', 'point_name', 'company_id', 'status')
-            ->get();
+        $boardingPointsQuery = BoardingPoint::where('is_deleted', 0)
+            ->select('id', 'point_name', 'company_id', 'status');
+
+        // Apply company filter BEFORE get()
+        if ($request->filled('company_id')) {
+            $boardingPointsQuery->where('company_id', $request->company_id);
+        }
+
+        $boardingPoints = $boardingPointsQuery->get();
 
         $pssCompanies = Company::where('status', 1)
             ->where('is_deleted', 0)
@@ -23,34 +29,17 @@ class BoardingPointController extends Controller
             ->get();
 
         return response()->json([
-            'status' => true,
-            'message' => 'Boarding points fetched successfully',
-            'data' => $boardingPoints,
+            'status'     => true,
+            'message'    => 'Boarding points fetched successfully',
+            'data'       => $boardingPoints,
             'psscompany' => $pssCompanies,
         ]);
     }
 
+
     /** Insert */
     public function insert(Request $request)
     {
-        $validator = Validator::make($request->all(), [
-            'point_name' => [
-                'required',
-                Rule::unique('boarding_points')
-                    ->where(fn ($q) => $q->where('is_deleted', 0)),
-            ],
-            'company_id' => 'required|exists:pss_companies,id',
-            'status'     => 'required|in:0,1',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'status' => false,
-                'message' => 'Validation error',
-                'errors' => $validator->errors(),
-            ], 422);
-        }
-
         $boardingPoint = BoardingPoint::create([
             'point_name' => $request->point_name,
             'company_id' => $request->company_id,
@@ -80,25 +69,6 @@ class BoardingPointController extends Controller
     /** Update */
     public function update(Request $request, $id)
     {
-        $validator = Validator::make($request->all(), [
-            'point_name' => [
-                'required',
-                Rule::unique('boarding_points')
-                    ->where(fn ($q) => $q->where('is_deleted', 0))
-                    ->ignore($id),
-            ],
-            'company_id' => 'required|exists:pss_companies,id',
-            'status'     => 'required|in:0,1',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'status' => false,
-                'message' => 'Validation error',
-                'errors' => $validator->errors(),
-            ], 422);
-        }
-
         $boardingPoint = BoardingPoint::findOrFail($id);
         $boardingPoint->update([
             'point_name' => $request->point_name,
