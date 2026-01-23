@@ -86,6 +86,7 @@ pipeline {
     stage('Run Test Container') {
       steps {
         sh '''
+        set -e
         docker rm -f ${TEST_CONTAINER} || true
 
         docker run -d --name ${TEST_CONTAINER} \
@@ -149,6 +150,7 @@ pipeline {
     stage('Go Live') {
       steps {
         sh '''
+        set -e
         echo "Stopping old live container..."
         docker rm -f ${LIVE_CONTAINER} || true
 
@@ -175,8 +177,10 @@ pipeline {
       echo "❌ DEPLOY FAILED — Attempting rollback..."
 
       sh '''
+      
       if [ ! -z "$OLD_IMAGE" ]; then
         echo "Restoring old version: $OLD_IMAGE"
+        set -e
         docker rm -f ${LIVE_CONTAINER} || true
 
         docker run -d --name ${LIVE_CONTAINER} \
