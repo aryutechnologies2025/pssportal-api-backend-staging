@@ -12,6 +12,7 @@ use App\Models\Employee;
 use Illuminate\Support\Facades\Hash;
 use App\Models\ContractCanEmp;
 use App\Models\ContractCandidateDocument;
+use App\Models\Eductions;
 use Illuminate\Support\Str;
 
 class ContactCandidateController extends Controller
@@ -159,6 +160,11 @@ class ContactCandidateController extends Controller
             ->select('full_name', 'id')
             ->get();
 
+        $educations = Eductions::where('status', '1')->where('is_deleted', 0)
+            ->select('id', 'eduction_name')
+            ->latest()
+            ->get();
+
         return response()->json(['success' => true, 'data' => [
             'employees'         => $employees,
             'interview_status'  => $interview_status,
@@ -172,7 +178,7 @@ class ContactCandidateController extends Controller
     public function show($id)
     {
         // Load employee with documents
-        $emp = ContractEmployee::with('documents')->where('id', $id)
+        $emp = ContractEmployee::with(['documents','education'])->where('id', $id)
             ->where('is_deleted', 0)
             ->firstOrFail();
 

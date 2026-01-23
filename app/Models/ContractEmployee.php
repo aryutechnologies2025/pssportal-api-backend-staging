@@ -27,13 +27,21 @@ class ContractEmployee extends Model
         'other_reference',
         'joined_date',
         'education',
-        'profile_picture'
+        'profile_picture',
+        'education_id',
     ];
 
     public function company()
     {
         return $this->belongsTo(Company::class, 'company_id');
     }
+
+
+    public function education()
+    {
+        return $this->belongsTo(Eductions::class, 'education_id');
+    }
+    
 
     public function notes()
     {

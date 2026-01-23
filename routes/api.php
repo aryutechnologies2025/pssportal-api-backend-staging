@@ -31,7 +31,8 @@ use App\Http\Controllers\AttendanceReportController;
 use App\Http\Controllers\WorkReportController;
 use App\Http\Controllers\HolidayController;
 use App\Http\Controllers\FinanceController;
-
+use App\Http\Controllers\BoardingPointController;
+use App\Http\Controllers\EductionController;
 /*
 |--------------------------------------------------------------------------
 | API Routes
@@ -285,6 +286,28 @@ Route::middleware('static.auth')->group(function () {
             Route::post('/create', 'store');
             Route::put('/update/{id}', 'update');
             Route::delete('/delete/{id}', 'destroy');
+        });
+    });
+
+    //Bording point
+    Route::controller(BoardingPointController::class)->group(function () {
+        Route::prefix('boarding-points')->group(function () {
+            Route::get('/', 'list')->name('admin.boarding_point_list');
+            Route::get('/edit/{id}', 'edit_form')->name('admin.boarding_point_edit_form');
+            Route::post('/create', 'insert')->name('admin.boarding_point_insert');
+            Route::post('/update/{id}', 'update')->name('admin.boarding_point_update');
+            Route::delete('/delete', 'delete')->name('admin.boarding_point_delete');
+        });
+    });
+
+    //Eduction
+    Route::controller(EductionController::class)->group(function () {
+        Route::prefix('eduction')->group(function () {
+            Route::get('/', 'list')->name('admin.eduction_list');
+            Route::get('/edit/{id}', 'edit_form')->name('admin.eduction_edit_form');
+            Route::post('/create', 'insert')->name('admin.eduction_insert');
+            Route::post('/update/{id}', 'update')->name('admin.eduction_update');
+            Route::delete('/delete', 'delete')->name('admin.eduction_delete');
         });
     });
 });
