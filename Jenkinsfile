@@ -87,15 +87,16 @@ pipeline {
       steps {
         sh '''
         set -e
+
         docker rm -f ${TEST_CONTAINER} || true
 
         docker run -d --name ${TEST_CONTAINER} \
-          --network staging_net
-          --add-host=staging_mysql:host-gateway \
-          -p ${TEST_PORT}:80 \
-          -v ${ENV_FILE}:/var/www/html/.env \
-          -v ${STORAGE}:/var/www/html/storage \
-          ${APP_NAME}:${IMAGE_TAG}
+        --network staging_net \
+        --add-host=host.docker.internal:host-gateway \
+        -p ${TEST_PORT}:80 \
+        -v ${ENV_FILE}:/var/www/html/.env \
+        -v ${STORAGE}:/var/www/html/storage \
+        ${APP_NAME}:${IMAGE_TAG}
         '''
       }
     }
@@ -151,21 +152,22 @@ pipeline {
       steps {
         sh '''
         set -e
+
         echo "Stopping old live container..."
         docker rm -f ${LIVE_CONTAINER} || true
 
         echo "Starting new live container..."
         docker run -d --name ${LIVE_CONTAINER} \
-          --network staging_net
-          --add-host=staging_mysql:host-gateway \
-          -p ${LIVE_PORT}:80 \
-          -v ${ENV_FILE}:/var/www/html/.env \
-          -v ${STORAGE}:/var/www/html/storage \
-          ${APP_NAME}:${IMAGE_TAG}
+        --network staging_net \
+        --add-host=host.docker.internal:host-gateway \
+        -p ${LIVE_PORT}:80 \
+        -v ${ENV_FILE}:/var/www/html/.env \
+        -v ${STORAGE}:/var/www/html/storage \
+        ${APP_NAME}:${IMAGE_TAG}
         '''
       }
     }
-  }
+  } 
 
   post {
     success {
@@ -184,12 +186,13 @@ pipeline {
         docker rm -f ${LIVE_CONTAINER} || true
 
         docker run -d --name ${LIVE_CONTAINER} \
-          --network staging_net
-          --add-host=staging_mysql:host-gateway \
-          -p ${LIVE_PORT}:80 \
-          -v ${ENV_FILE}:/var/www/html/.env \
-          -v ${STORAGE}:/var/www/html/storage \
-          $OLD_IMAGE
+                  --network staging_net \
+                  --add-host=host.docker.internal:host-gateway \
+                  -p ${LIVE_PORT}:80 \
+                  -v ${ENV_FILE}:/var/www/html/.env \
+                  -v ${STORAGE}:/var/www/html/storage \
+                  $OLD_IMAGE
+
       else
         echo "No old image found — rollback not possible"
       fi
