@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\BoardingPoint;
 use Illuminate\Http\Request;
 use App\Models\ContractCanEmp;
 use App\Models\NoteAttachment;
@@ -193,17 +194,22 @@ class ContractEmployeeController extends Controller
             ->select('full_name', 'id')
             ->get();
 
+        $boardingpoints = BoardingPoint::where('status', '1')->where('is_deleted', 0)
+            ->select('id', 'point_name')
+            ->latest()
+            ->get();
+
         return response()->json(['success' => true, 'data' => [
             'employees'         => $employees,
             'companies' => $companies,
             'pssemployees' => $pssemployees,
-            // 'educations' => $educations
+            'boardingpoints' => $boardingpoints
         ]]);
     }
 
     public function show($id)
     {
-        $emp = ContractCanEmp::with('documents')->where('id', $id)
+        $emp = ContractCanEmp::with(['documents', 'boardingPoint'])->where('id', $id)
             ->where('is_deleted', 0)
             ->firstOrFail();
 
