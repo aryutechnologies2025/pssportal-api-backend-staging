@@ -2,7 +2,7 @@ pipeline {
   agent any
 
   environment {
-    SERVER_PATH = "/var/www/staging/pssportal-api-backend"
+    SERVER_PATH  = "/var/www/staging/pssportal-api-backend"
     LIVE_CONTAINER = "staging_api"
     LIVE_PORT = "8000"
     GIT_BRANCH = "main"
@@ -10,7 +10,29 @@ pipeline {
 
   stages {
 
-    // 1. Pull latest code to server
+    // ----------------------------
+    // 0. Ownership Safety Net
+    // ----------------------------
+    stage('Pre-Fix Ownership') {
+      steps {
+        sh '''
+        set -e
+        echo "Fixing repo ownership for Jenkins..."
+
+        sudo chown -R jenkins:jenkins ${SERVER_PATH}
+
+        sudo chown -R www-data:www-data ${SERVER_PATH}/storage
+        sudo chown -R www-data:www-data ${SERVER_PATH}/bootstrap/cache
+
+        sudo chmod -R 775 ${SERVER_PATH}/storage
+        sudo chmod -R 775 ${SERVER_PATH}/bootstrap/cache
+        '''
+      }
+    }
+
+    // ----------------------------
+    // 1. Pull latest code
+    // ----------------------------
     stage('Update Server Code') {
       steps {
         sh '''
@@ -27,7 +49,9 @@ pipeline {
       }
     }
 
-    // 2. Clear Laravel cache (NO MIGRATION)
+    // ----------------------------
+    // 2. Clear Laravel cache
+    // ----------------------------
     stage('Clear App Cache') {
       steps {
         sh '''
@@ -37,29 +61,33 @@ pipeline {
         '''
       }
     }
-    
+
     // ----------------------------
-// Fix Laravel Permissions
-// ----------------------------
-stage('Fix Permissions') {
-  steps {
-    sh '''
-    set -e
-    echo "Fixing Laravel permissions..."
+    // 3. Fix Laravel Runtime Permissions
+    // ----------------------------
+    stage('Fix Permissions') {
+      steps {
+        sh '''
+        set -e
+        echo "Fixing Laravel runtime permissions..."
 
-    docker exec staging_api sh -c "
-      mkdir -p /var/www/html/storage/logs
-      mkdir -p /var/www/html/bootstrap/cache
+        docker exec ${LIVE_CONTAINER} sh -c "
+          mkdir -p /var/www/html/storage/logs
+          mkdir -p /var/www/html/bootstrap/cache
 
-      chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap
-      chmod -R 775 /var/www/html/storage /var/www/html/bootstrap
-    "
-    '''
-  }
-}
+          chown -R www-data:www-data /var/www/html/storage
+          chown -R www-data:www-data /var/www/html/bootstrap/cache
 
+          chmod -R 775 /var/www/html/storage
+          chmod -R 775 /var/www/html/bootstrap/cache
+        "
+        '''
+      }
+    }
 
-    // 3. Health Check
+    // ----------------------------
+    // 4. Health Check
+    // ----------------------------
     stage('Health Check') {
       steps {
         sh '''
