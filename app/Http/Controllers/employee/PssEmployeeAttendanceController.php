@@ -294,7 +294,7 @@ class PssEmployeeAttendanceController extends Controller
             $photoPath = 'uploads/attendance/selfies/' . $photoName;
         }
 
-        // 🔹 Save attendance
+        // 🔹 Save attendance testing
         PssEmployeeAttendance::create([
             'employee_id'     => $employeeId,
             'attendance_date' => $today,
