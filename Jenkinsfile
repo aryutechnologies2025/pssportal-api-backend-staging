@@ -35,17 +35,15 @@ pipeline {
     stage('Update Server Code') {
       steps {
         sh '''
-        echo "Updating server code..."
-        ssh root@${SERVER_IP} "
-          cd ${SERVER_PATH} &&
-          git fetch origin &&
-          git reset --hard origin/${GIT_BRANCH} &&
-          git rev-parse HEAD
-        "
+        echo "Updating server code locally..."
+        cd /var/www/staging/pssportal-api-backend &&
+        git fetch origin &&
+        git reset --hard origin/main &&
+        git rev-parse HEAD
         '''
       }
     }
-
+ 
     // ----------------------------
     // 3. Ensure Storage Exists
     // ----------------------------
