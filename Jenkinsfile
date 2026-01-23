@@ -9,23 +9,45 @@ pipeline {
     LIVE_PORT = "8000"
     TEST_PORT = "9000"
 
-    ENV_FILE = "/var/www/staging/pssportal-api-backend/.env"
-    STORAGE  = "/var/www/staging/pssportal-api-backend/storage"
+    SERVER_PATH = "/var/www/staging/pssportal-api-backend"
+    ENV_FILE   = "/var/www/staging/pssportal-api-backend/.env"
+    STORAGE    = "/var/www/staging/pssportal-api-backend/storage"
+
+    GIT_BRANCH = "main"
+    SERVER_IP = "127.0.0.1"
   }
 
   stages {
 
     // ----------------------------
-    // 1. Checkout
+    // 1. Checkout (Jenkins workspace)
     // ----------------------------
     stage('Checkout') {
       steps {
         checkout scm
+        sh 'git rev-parse HEAD'
       }
     }
 
     // ----------------------------
-    // 2. Ensure Storage Exists
+    // 2. Update Server Repo (CRITICAL FIX)
+    // ----------------------------
+    stage('Update Server Code') {
+      steps {
+        sh '''
+        echo "Updating server code..."
+        ssh root@${SERVER_IP} "
+          cd ${SERVER_PATH} &&
+          git fetch origin &&
+          git reset --hard origin/${GIT_BRANCH} &&
+          git rev-parse HEAD
+        "
+        '''
+      }
+    }
+
+    // ----------------------------
+    // 3. Ensure Storage Exists
     // ----------------------------
     stage('Ensure Storage Structure') {
       steps {
@@ -38,7 +60,7 @@ pipeline {
     }
 
     // ----------------------------
-    // 3. Build Docker Image
+    // 4. Build Docker Image
     // ----------------------------
     stage('Build Image') {
       steps {
@@ -61,7 +83,7 @@ pipeline {
     }
 
     // ----------------------------
-    // 4. Run Test Container
+    // 5. Run Test Container
     // ----------------------------
     stage('Run Test Container') {
       steps {
@@ -80,7 +102,7 @@ pipeline {
     }
 
     // ----------------------------
-    // 5. Run DB Migrations
+    // 6. Run DB Migrations
     // ----------------------------
     stage('Run Migrations') {
       steps {
@@ -91,7 +113,7 @@ pipeline {
     }
 
     // ----------------------------
-    // 6. Health Check
+    // 7. Health Check
     // ----------------------------
     stage('Health Check') {
       steps {
@@ -103,7 +125,7 @@ pipeline {
     }
 
     // ----------------------------
-    // 7. Save Current Live Version (Rollback Memory)
+    // 8. Save Current Live Version
     // ----------------------------
     stage('Save Current Live Version') {
       steps {
@@ -124,7 +146,7 @@ pipeline {
     }
 
     // ----------------------------
-    // 8. Go Live (Safe, No Port Conflict)
+    // 9. Go Live
     // ----------------------------
     stage('Go Live') {
       steps {
