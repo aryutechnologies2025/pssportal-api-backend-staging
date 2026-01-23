@@ -37,6 +37,27 @@ pipeline {
         '''
       }
     }
+    
+    // ----------------------------
+// Fix Laravel Permissions
+// ----------------------------
+stage('Fix Permissions') {
+  steps {
+    sh '''
+    set -e
+    echo "Fixing Laravel permissions..."
+
+    docker exec staging_api sh -c "
+      mkdir -p /var/www/html/storage/logs
+      mkdir -p /var/www/html/bootstrap/cache
+
+      chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap
+      chmod -R 775 /var/www/html/storage /var/www/html/bootstrap
+    "
+    '''
+  }
+}
+
 
     // 3. Health Check
     stage('Health Check') {
