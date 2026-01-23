@@ -18,4 +18,8 @@ class BoardingPoint extends Model
         'created_by',
         'updated_by',
     ];
+
+      public function company() {
+        return $this->belongsTo(Company::class, 'company_id')->select('id', 'company_name');
+    }
 }

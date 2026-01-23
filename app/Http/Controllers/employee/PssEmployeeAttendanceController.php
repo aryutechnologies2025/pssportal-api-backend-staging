@@ -304,6 +304,7 @@ class PssEmployeeAttendanceController extends Controller
             'photo'           => $photoPath,
             'latitude'        => $request->latitude,
             'longitude'       => $request->longitude,
+            'location_details' => $request->location_details,
         ]);
 
         return response()->json([

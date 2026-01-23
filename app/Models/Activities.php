@@ -26,6 +26,13 @@ class Activities extends Model
             ->select('id', 'full_name', 'gen_employee_id', 'role_id');
     }
 
+    public function attendance()
+    {
+        return $this->hasOne(PssEmployeeAttendance::class, 'employee_id', 'created_by')
+            ->latest('id'); // ✅ simpler & safer than latestOfMany
+    }
+
+
     // Contract Employee
 
     public function role()

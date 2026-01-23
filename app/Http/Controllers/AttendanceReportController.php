@@ -165,6 +165,22 @@ class AttendanceReportController extends Controller
 
             $logs = $records->get($employee->id);
 
+
+            $attendanceDetails = [];
+
+            if ($logs) {
+                foreach ($logs as $log) {
+                    $attendanceDetails[] = [
+                        'reason'           => $log->reason,
+                        'attendance_time'  => $log->attendance_time,
+                        'created_at'       => $log->created_at->format('Y-m-d H:i:s'),
+                        'location_details' => $log->location_details,
+                        'profile_photo'    => $log->photo,
+                    ];
+                }
+            }
+
+
             $login = null;
             $logout = null;
             $totalSeconds = 0;
@@ -240,6 +256,8 @@ class AttendanceReportController extends Controller
                 'break_time'    => gmdate('H:i:s', $breakSeconds),
                 'total_hours'   => gmdate('H:i:s', $totalSeconds),
                 'payable_time' => gmdate('H:i:s', $payableSeconds),
+                // ✅ FULL LOGIN DETAILS ARRAY
+                'attendance_details' => $attendanceDetails,
             ];
         }
 
