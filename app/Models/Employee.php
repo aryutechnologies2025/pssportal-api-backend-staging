@@ -38,7 +38,8 @@ class Employee extends Model
         'branch_id',
         'date_of_joining',
         'gen_employee_id',
-        'is_deleted'
+        'is_deleted',
+        'jp_referal'
     ];
 
     protected $casts = [

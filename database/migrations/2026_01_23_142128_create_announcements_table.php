@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('announcements', function (Blueprint $table) {
             $table->id();
             $table->string('start_date');
-            $table->boolean('expiry_date')->default(1);
+            $table->string('expiry_date')->default(1);
             $table->text('announcement_details');
             $table->string('visible_to');
             $table->boolean('status')->default(1);

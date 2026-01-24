@@ -31,7 +31,7 @@ class EmployeeAuthController extends Controller
         // 2️⃣ FIRST: Check employee-level permission
         $permission = Permission::with('modules')
             ->where('privilege_for', 'employee')
-            ->select('id','role_id','privilege_for')
+            ->select('id', 'role_id', 'privilege_for')
             ->where('role_id', $employee->id) // employee id
             ->where('is_deleted', '0')
             ->first();
@@ -46,7 +46,7 @@ class EmployeeAuthController extends Controller
 
         session(['employee_id' => $employee->id]);
 
-        $setting = Setting::select('date_format')->first();
+        $setting = Setting::select('date_format', 'site_logo', 'fav_icon')->first();
 
         return response()->json([
             'status' => true,

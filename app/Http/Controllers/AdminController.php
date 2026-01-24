@@ -52,7 +52,7 @@ class AdminController extends Controller
             'type' => 'admin'
         ]);
 
-        $setting = Setting::select('date_format')->first();
+        $setting = Setting::select('date_format','site_logo','fav_icon')->first();
         // 4️⃣ Return success response (optionally add token later)
         return response()->json([
             'success' => true,

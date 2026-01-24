@@ -28,7 +28,11 @@ class ContractEmployee extends Model
         'joined_date',
         'education',
         'profile_picture',
+        'boarding_point_id',
         'education_id',
+        'pan_number',
+        'marital_status',
+        'gender'
     ];
 
     public function company()
@@ -37,11 +41,17 @@ class ContractEmployee extends Model
     }
 
 
+    public function boardingpoint()
+    {
+        return $this->belongsTo(BoardingPoint::class, 'boarding_point_id');
+    }
+
+
     public function education()
     {
         return $this->belongsTo(Eductions::class, 'education_id');
     }
-    
+
 
     public function notes()
     {

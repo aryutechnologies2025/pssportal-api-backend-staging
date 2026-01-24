@@ -40,7 +40,8 @@ class ContractCanEmp extends Model
         'state',
         'branch_name',
         'bank_name',
-        'boarding_point_id'
+        'boarding_point_id',
+        'education_id'
     ];
 
     public function company()
@@ -54,9 +55,15 @@ class ContractCanEmp extends Model
             ->where('parent_type', 'contract_emp');
     }
 
-     public function boardingpoint()
+    public function boardingpoint()
     {
         return $this->belongsTo(BoardingPoint::class, 'boarding_point_id');
+    }
+
+
+    public function education()
+    {
+        return $this->belongsTo(Eductions::class, 'education_id');
     }
 
     public function documents()

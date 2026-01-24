@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Announcement;
-use Illuminate\Support\Facades\Validator;
 
 class AnnouncementController extends Controller
 {
@@ -28,7 +27,7 @@ class AnnouncementController extends Controller
             'start_date'           => $request->start_date,
             'expiry_date'          => $request->expiry_date,
             'announcement_details' => $request->announcement_details,
-            'visible_to'           => $request->visible_to,
+            'visible_to'           => $request->visible_to ?? [],
             'status'               => $request->status,
             'created_by'           => $request->created_by,
             'is_deleted'           => 0,
@@ -50,21 +49,24 @@ class AnnouncementController extends Controller
 
         return response()->json([
             'status' => true,
-            'data'   => $announcement,
+            'data'   => [
+                'announcement' => $announcement,
+                'visible_roles' => $announcement->visibleRoles(),
+            ],
         ]);
     }
 
     /** Update */
     public function update(Request $request, $id)
     {
-        
+
         $announcement = Announcement::findOrFail($id);
 
         $announcement->update([
             'start_date'           => $request->start_date,
             'expiry_date'          => $request->expiry_date,
             'announcement_details' => $request->announcement_details,
-            'visible_to'           => $request->visible_to,
+            'visible_to'           => $request->visible_to ?? [],
             'status'               => $request->status,
             'updated_by'           => $request->updated_by,
         ]);

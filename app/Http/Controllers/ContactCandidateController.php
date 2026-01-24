@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Hash;
 use App\Models\ContractCanEmp;
 use App\Models\ContractCandidateDocument;
 use App\Models\Eductions;
+use App\Models\BoardingPoint;
 use Illuminate\Support\Str;
 
 class ContactCandidateController extends Controller
@@ -165,6 +166,7 @@ class ContactCandidateController extends Controller
             ->latest()
             ->get();
 
+     
         return response()->json(['success' => true, 'data' => [
             'employees'         => $employees,
             'interview_status'  => $interview_status,
@@ -178,7 +180,7 @@ class ContactCandidateController extends Controller
     public function show($id)
     {
         // Load employee with documents
-        $emp = ContractEmployee::with(['documents','education'])->where('id', $id)
+        $emp = ContractEmployee::with(['documents', 'education'])->where('id', $id)
             ->where('is_deleted', 0)
             ->firstOrFail();
 

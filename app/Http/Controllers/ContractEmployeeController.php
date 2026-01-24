@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Validator;
 use Carbon\Carbon;
 use App\Models\Company;
 use App\Models\Employee;
+use App\Models\Eductions;
 use Illuminate\Support\Facades\Hash;
 use App\Models\ContractEmployeeDocument;
 use Illuminate\Support\Str;
@@ -19,47 +20,39 @@ class ContractEmployeeController extends Controller
 {
     public function store(Request $request)
     {
-        // $request->validate([
-        //     // 'phone_number' => 'required|unique:contract_employees,phone_number',
-        //     'aadhar_number' => 'required|digits:12|unique:contract_can_emps,aadhar_number',
-        //     'employee_id' => 'unique:contract_can_emps,employee_id'
-        // ]);
-        $validator = Validator::make(
-            $request->all(),
-            [
-                'aadhar_number' => [
-                    'required',
-                    'digits:12',
-                    Rule::unique('contract_can_emps', 'aadhar_number')
-                        ->where(function ($q) use ($request) {
-                            return $q->where('is_deleted', 0);
-                        }),
-                ],
+        // $validator = Validator::make(
+        //     $request->all(),
+        //     [
+        //         'aadhar_number' => [
+        //             Rule::unique('contract_can_emps', 'aadhar_number')
+        //                 ->where(function ($q) use ($request) {
+        //                     return $q->where('is_deleted', 0);
+        //                 }),
+        //         ]
+        //     ],
+        //     [
+        //         'aadhar_number.unique'   => 'This Aadhar number is already registered.',
+        //     ]
+        // );
 
-                'employee_id' => [
-                    'required',
-                    Rule::unique('contract_can_emps', 'employee_id')
-                        ->where(function ($q) use ($request) {
-                            return $q->where('is_deleted', 0);
-                        }),
-                ],
-            ],
-            [
-                'aadhar_number.required' => 'Aadhar number is required.',
-                'aadhar_number.digits'   => 'Aadhar number must be exactly 12 digits.',
-                'aadhar_number.unique'   => 'This Aadhar number is already registered for this company.',
+        // if ($validator->fails()) {
+        //     return response()->json([
+        //         'success' => false,
+        //         'message' => 'Validation errors',
+        //         'errors'  => $validator->errors()
+        //     ], 422);
+        // }
 
-                'employee_id.required'   => 'Employee ID is required.',
-                'employee_id.unique'     => 'This Employee ID already exists for this company.',
-            ]
-        );
+        $existingEmp = ContractCanEmp::where('aadhar_number', $request->aadhar_number)
+            ->where('is_deleted', 0)
+            ->first();
 
-        if ($validator->fails()) {
+        if ($existingEmp) {
             return response()->json([
                 'success' => false,
-                'message' => 'Validation errors',
-                'errors'  => $validator->errors()
-            ], 422);
+                'message' => 'This Aadhar number is already registered.',
+                'existing_id' => $existingEmp->id,
+            ], 409);
         }
 
         $data = $request->all();
@@ -194,6 +187,12 @@ class ContractEmployeeController extends Controller
             ->select('full_name', 'id')
             ->get();
 
+
+        $educations = Eductions::where('status', '1')->where('is_deleted', 0)
+            ->select('id', 'eduction_name')
+            ->latest()
+            ->get();
+
         $boardingpoints = BoardingPoint::where('status', '1')->where('is_deleted', 0)
             ->select('id', 'point_name')
             ->latest()
@@ -203,7 +202,8 @@ class ContractEmployeeController extends Controller
             'employees'         => $employees,
             'companies' => $companies,
             'pssemployees' => $pssemployees,
-            'boardingpoints' => $boardingpoints
+            'boardingpoints' => $boardingpoints,
+            'educations' => $educations
         ]]);
     }
 
@@ -258,46 +258,61 @@ class ContractEmployeeController extends Controller
     {
         $emp = ContractCanEmp::where('id', $id)->where('is_deleted', 0)->firstOrFail();
 
+
+        $existingAadhar = ContractCanEmp::where('aadhar_number', $request->aadhar_number)
+            ->where('is_deleted', 0)
+            ->where('id', '!=', $id)
+            ->first();
+
+        if ($existingAadhar) {
+            return response()->json([
+                'success' => false,
+                'message' => 'This Aadhaar number is already registered.',
+                'existing_id' => $existingAadhar->id,
+                'field' => 'aadhar_number'
+            ], 409);
+        }
+
         // $request->validate([
         //     // 'phone_number' => 'unique:contract_employees,phone_number,' . $id,
         //     'aadhar_number' => 'digits:12|unique:contract_can_emps,aadhar_number,' . $id,
         // ]);
-        $validator = Validator::make(
-            $request->all(),
-            [
-                'aadhar_number' => [
-                    'required',
-                    'digits:12',
-                    Rule::unique('contract_can_emps', 'aadhar_number')
-                        ->ignore($id)
-                        ->where(function ($q) use ($request) {
-                            return $q->where('is_deleted', 0);
-                        }),
-                ],
+        // $validator = Validator::make(
+        //     $request->all(),
+        //     [
+        //         'aadhar_number' => [
+        //             'required',
+        //             'digits:12',
+        //             Rule::unique('contract_can_emps', 'aadhar_number')
+        //                 ->ignore($id)
+        //                 ->where(function ($q) use ($request) {
+        //                     return $q->where('is_deleted', 0);
+        //                 }),
+        //         ],
 
-                'employee_id' => [
-                    'required',
-                    Rule::unique('contract_can_emps', 'employee_id')
-                        ->ignore($id)
-                        ->where(function ($q) use ($request) {
-                            return $q->where('is_deleted', 0);
-                        }),
-                ],
-            ],
-            [
-                'aadhar_number.unique' => 'This Aadhaar number is already registered for this company.',
-                'employee_id.unique'   => 'This Employee ID already exists for this company.',
-            ]
-        );
+        //         'employee_id' => [
+        //             'required',
+        //             Rule::unique('contract_can_emps', 'employee_id')
+        //                 ->ignore($id)
+        //                 ->where(function ($q) use ($request) {
+        //                     return $q->where('is_deleted', 0);
+        //                 }),
+        //         ],
+        //     ],
+        //     [
+        //         'aadhar_number.unique' => 'This Aadhaar number is already registered for this company.',
+        //         'employee_id.unique'   => 'This Employee ID already exists for this company.',
+        //     ]
+        // );
 
 
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Validation errors',
-                'errors'  => $validator->errors()
-            ], 422);
-        }
+        // if ($validator->fails()) {
+        //     return response()->json([
+        //         'success' => false,
+        //         'message' => 'Validation errors',
+        //         'errors'  => $validator->errors()
+        //     ], 422);
+        // }
 
         $data = $request->all();
         if ($request->reference === 'other') {
