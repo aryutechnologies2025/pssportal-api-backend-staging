@@ -30,6 +30,7 @@ class EmployeeContractCandidateController extends Controller
                 $query->whereIn('company_id', $companyIds);
             })
             ->with('notes')
+            ->select('id', 'company_id', 'reference', 'other_reference', 'interview_status', 'joining_status', 'education_id', 'status', 'created_at')
             ->orderByDesc('id')
             ->get();
 
@@ -173,6 +174,7 @@ class EmployeeContractCandidateController extends Controller
 
         $employees = $employeesQuery
             ->with(['notes', 'company'])
+             ->select('id', 'company_id', 'name', 'employee_id', 'phone_number', 'aadhar_number', 'joining_date', 'status', 'created_at','gender', 'date_of_birth')
             ->orderByDesc('id')
             ->get();
 

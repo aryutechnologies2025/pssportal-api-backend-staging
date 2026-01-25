@@ -44,7 +44,7 @@ class ContactController extends Controller
         // Base query
         $query = Contact::where('is_deleted', 0);
 
-        // Date filter
+        // 📅 Date filter
         if ($request->filled('from_date') && $request->filled('to_date')) {
             $from = Carbon::parse($request->from_date)->startOfDay();
             $to   = Carbon::parse($request->to_date)->endOfDay();
@@ -52,16 +52,33 @@ class ContactController extends Controller
             $query->whereBetween('created_at', [$from, $to]);
         }
 
+        // 🏷 Subject filter
+        if ($request->filled('subject')) {
+            $query->where('subject', $request->subject);
+            // OR use like search:
+            // $query->where('subject', 'LIKE', '%' . $request->subject . '%');
+        }
+
         // Execute query
         $contacts = $query
-        ->orderBy('id', 'desc')
-        ->get();
+            ->orderBy('id', 'desc')
+            ->get();
+
+        // Subject dropdown list
+        $subject = Contact::where('is_deleted', 0)
+            ->select('subject')
+            ->whereNotNull('subject')
+            ->distinct()
+            ->orderBy('subject')
+            ->get();
 
         return response()->json([
-            'success' => true,
-            'data'    => $contacts
+            'success'  => true,
+            'data'     => $contacts,
+            'subjects' => $subject
         ], 200);
     }
+
 
     public function destroy($id)
     {

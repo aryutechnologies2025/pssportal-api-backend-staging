@@ -200,6 +200,7 @@ class ContractEmployeeController extends Controller
                 $q->whereBetween('joining_date', [$from, $to]);
             })
             ->with(['notes', 'company'])
+            ->select('id', 'company_id', 'name', 'employee_id', 'phone_number', 'aadhar_number', 'joining_date', 'status', 'created_at','gender', 'date_of_birth')
             ->orderByDesc('id')
             ->get();
 

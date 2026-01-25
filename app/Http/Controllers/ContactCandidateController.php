@@ -124,6 +124,7 @@ class ContactCandidateController extends Controller
             })
             // ->where('joining_status', 'not_joined')
             ->with('notes')
+            ->select('id', 'company_id', 'reference', 'other_reference', 'interview_status', 'joining_status', 'education_id', 'status', 'created_at')
             ->orderByDesc('id')
             ->get();
 
@@ -232,7 +233,6 @@ class ContactCandidateController extends Controller
     public function update(Request $request, $id)
     {
         $emp = ContractEmployee::where('id', $id)->where('is_deleted', 0)->firstOrFail();
-
 
         $existingAadhar = ContractEmployee::where('aadhar_number', $request->aadhar_number)
             ->where('is_deleted', 0)
