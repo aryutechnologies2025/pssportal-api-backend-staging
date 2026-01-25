@@ -11,10 +11,13 @@ use Carbon\Carbon;
 use App\Models\Company;
 use App\Models\Employee;
 use App\Models\Eductions;
+use App\Models\EmployeeRejoing;
+use App\Models\ContactDetail;
 use Illuminate\Support\Facades\Hash;
 use App\Models\ContractEmployeeDocument;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use App\Models\EmpRejoinLogs;
 
 class ContractEmployeeController extends Controller
 {
@@ -146,6 +149,34 @@ class ContractEmployeeController extends Controller
             }
         }
 
+        if (is_array($request->contact_details)) {
+            foreach ($request->contact_details as $contact) {
+                ContactDetail::create([
+                    'parent_id'   => $emp->id,
+                    'parent_type' => 'contract_emp',
+                    'name'        => $contact['name'],
+                    'relationship'        => $contact['relationship'] ?? null,
+                    'phone_number' => $contact['phone_number'],
+                ]);
+            }
+        }
+
+        //emp rejoing details
+        $rejoing_data = [
+            'parent_id' => $emp->id,
+            'company_id' => $request->company_id,
+            'boarding_point_id' => $request->boarding_point_id,
+            'address' => $request->address,
+            'joining_date' => $request->joining_date,
+            'employee_id' => $request->employee_id,
+            'rejoining_note' => $request->rejoining_note ?? null,
+            'rejoin_status' => $request->rejoin_status ?? 0,
+            'created_by' => $request->created_by
+        ];
+
+        $rejoingdetails = EmpRejoinLogs::create($rejoing_data);
+
+
         return response()->json(['success' => true, 'message' => 'Contract Employee created successfully']);
     }
 
@@ -209,7 +240,7 @@ class ContractEmployeeController extends Controller
 
     public function show($id)
     {
-        $emp = ContractCanEmp::with(['documents', 'boardingPoint'])->where('id', $id)
+        $emp = ContractCanEmp::with(['documents', 'boardingPoint', 'rejoingstatus', 'contacts'])->where('id', $id)
             ->where('is_deleted', 0)
             ->firstOrFail();
 
@@ -257,7 +288,6 @@ class ContractEmployeeController extends Controller
     public function update(Request $request, $id)
     {
         $emp = ContractCanEmp::where('id', $id)->where('is_deleted', 0)->firstOrFail();
-
 
         $existingAadhar = ContractCanEmp::where('aadhar_number', $request->aadhar_number)
             ->where('is_deleted', 0)
@@ -468,6 +498,32 @@ class ContractEmployeeController extends Controller
                 ]);
                 // }
             }
+        }
+
+
+        // Replace contacts
+        ContactDetail::where('parent_id', $id)
+            ->where('parent_type', 'contract_emp')
+            ->delete();
+
+        if (is_array($request->contact_details)) {
+            foreach ($request->contact_details as $contact) {
+                ContactDetail::create([
+                    'parent_id'   => $emp->id,
+                    'parent_type' => 'contract_emp',
+                    'name'        => $contact['name'],
+                    'relationship'        => $contact['relationship'] ?? null,
+                    'phone_number' => $contact['phone_number'],
+                ]);
+            }
+        }
+
+        if ($request->rejoing_details) {
+            $empRejoing = EmployeeRejoing::create([
+                'parent_id' => $emp->id,
+                'status' => $request->rejoin_status,
+                'notes' => $request->rejoin_notes,
+            ]);
         }
 
         return response()->json(['success' => true, 'message' => 'Updated successfully', 'data' => $emp]);
@@ -787,5 +843,35 @@ class ContractEmployeeController extends Controller
             'success' => true,
             'employee_id' => $newEmployeeId
         ]);
+    }
+
+    public function RejoinStatusList()
+    {
+        $rejoinstatus = EmpRejoinLogs::with(['employee','company','boardingPoint'])->get();
+
+        return response()->json(['success' => true, 'data' => $rejoinstatus]);
+    }
+
+    public function RejoinStatusUpdate(Request $request, $id)
+    {
+        // //emp rejoing details
+        // $rejoing_data = [
+        //     'parent_id' => parent_id,
+        //     'company_id' => company_id,
+        //     'boarding_point_id' => boarding_point_id,
+        //     'address' => $request->address,
+        //     'joining_date' => $request->joining_date,
+        //     'employee_id' => $request->employee_id,
+        //     'rejoining_note' => $request->rejoining_note,
+        //     'rejoin_status' => $request->rejoin_status,
+        //     'created_by' => $request->created_by
+        // ];
+
+
+        $rejoinstatus = new EmpRejoinLogs();
+        $data = $request->all();
+        $rejoinstatus->create($data);
+
+        return response()->json(['success' => true, 'message' => 'Rejoin Status Updated successfully']);
     }
 }

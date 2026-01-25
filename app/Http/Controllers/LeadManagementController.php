@@ -437,6 +437,7 @@ class LeadManagementController extends Controller
             'notes'           => $request->notes,
             'status'          => $request->lead_status,
             'followup_status' => $request->followup_status,
+            'scheduled_date' => $request->scheduled_date,
             'followup_date'   => $request->followup_date
                 ? Carbon::parse($request->followup_date)->format('Y-m-d')
                 : null,
