@@ -135,8 +135,9 @@ class CompanyController extends Controller
     public function index()
     {
         $companies = Company::where('is_deleted', 0)
-            ->with(['contacts', 'shifts'])
+            // ->with(['contacts', 'shifts'])
             ->latest()
+            ->select('id', 'company_name', 'website_url', 'support_email', 'billing_email', 'gst_number', 'status', 'created_at', 'phone_number')
             ->get();
 
         return response()->json([
