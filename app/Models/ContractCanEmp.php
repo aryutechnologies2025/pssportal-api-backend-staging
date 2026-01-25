@@ -70,4 +70,18 @@ class ContractCanEmp extends Model
     {
         return $this->hasMany(ContractEmployeeDocument::class, 'employee_id');
     }
+
+    public function rejoingstatus()
+    {
+        return $this->hasOne(EmployeeRejoing::class, 'parent_id')
+            ->where('status', 1)
+            ->latestOfMany(); // gets latest by created_at
+    }
+
+
+    public function contacts()
+    {
+        return $this->hasMany(ContactDetail::class, 'parent_id')
+            ->where('parent_type', 'contract_emp');
+    }
 }

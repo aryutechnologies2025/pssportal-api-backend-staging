@@ -17,7 +17,8 @@ class LeadManagementNote extends Model
         'status',
         'followup_status',
         'followup_date',
-        'created_by'
+        'created_by',
+        'scheduled_date'
     ];
 
     public function getCreatedAtAttribute($value)

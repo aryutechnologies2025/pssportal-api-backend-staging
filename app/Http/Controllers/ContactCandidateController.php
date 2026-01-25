@@ -22,21 +22,17 @@ class ContactCandidateController extends Controller
     public function store(Request $request)
     {
 
-        // dd($request->all());
-        // dd($request->all(), $request->file('documents'));
+        $existingEmp = ContractEmployee::where('aadhar_number', $request->aadhar_number)
+            ->where('is_deleted', 0)
+            ->first();
 
-        $validator = Validator::make($request->all(), [
-            'phone_number'  => 'required|digits_between:10,12',
-            'aadhar_number' => 'required|digits:12|unique:contract_employees,aadhar_number',
-        ]);
-
-        if ($validator->fails()) {
+        if ($existingEmp) {
             return response()->json([
                 'success' => false,
-                'errors'  => $validator->errors()
-            ], 422);
+                'message' => 'This Aadhar number is already registered.',
+                'existing_id' => $existingEmp->id,
+            ], 409);
         }
-
 
         $data = $request->all();
 
@@ -166,7 +162,7 @@ class ContactCandidateController extends Controller
             ->latest()
             ->get();
 
-     
+
         return response()->json(['success' => true, 'data' => [
             'employees'         => $employees,
             'interview_status'  => $interview_status,
@@ -237,10 +233,21 @@ class ContactCandidateController extends Controller
     {
         $emp = ContractEmployee::where('id', $id)->where('is_deleted', 0)->firstOrFail();
 
-        $request->validate([
-            'phone_number' => 'unique:contract_employees,phone_number,' . $id,
-            'aadhar_number' => 'digits:12|unique:contract_employees,aadhar_number,' . $id,
-        ]);
+
+        $existingAadhar = ContractEmployee::where('aadhar_number', $request->aadhar_number)
+            ->where('is_deleted', 0)
+            ->where('id', '!=', $id)
+            ->first();
+
+        if ($existingAadhar) {
+            return response()->json([
+                'success' => false,
+                'message' => 'This Aadhaar number is already registered.',
+                'existing_id' => $existingAadhar->id,
+                'field' => 'aadhar_number'
+            ], 409);
+        }
+
 
         $data = $request->all();
         if ($request->reference === 'other') {
@@ -368,79 +375,56 @@ class ContactCandidateController extends Controller
 
     public function import(Request $request)
     {
-
-        // dd($request->all());
-        // 1️⃣ Validate CSV file only
-        $validator = Validator::make($request->all(), [
-            'file' => 'required|file|mimes:csv,txt'
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Invalid file format. Only CSV allowed.',
-                'errors'  => $validator->errors()
-            ], 422);
-        }
-
         $file = $request->file('file');
         $handle = fopen($file->getRealPath(), 'r');
 
-        $header = fgetcsv($handle); // CSV header
+        $header = fgetcsv($handle);
         $inserted = 0;
         $skipped  = 0;
         $errors   = [];
 
         while (($row = fgetcsv($handle)) !== false) {
 
+            // ⚠️ Skip broken rows
+            if (count($header) !== count($row)) {
+                $errors[] = ['row' => $row, 'error' => 'Column mismatch'];
+                continue;
+            }
+
             $data = array_combine($header, $row);
 
-            /* UNIQUE CHECK */
-            $exists = ContractEmployee::where('aadhar_number', $data['aadhar_number'])
-                // ->where('company_id', $request->company_id)
-                ->exists();
+            // 🔒 Safe read
+            $aadhar = $this->csvValue($data, 'aadhar_number');
 
-            if ($exists) {
-                // $errors[] = [
-                //     'row'   => $data,
-                //     'error' => 'Duplicate Aadhaar number'
-                // ];
-                $skipped++;
-                continue; // ✅ skip ONLY this row, next rows will insert
+            // 🔁 Duplicate check only if aadhar exists
+            if ($aadhar) {
+                $exists = ContractEmployee::where('aadhar_number', $aadhar)
+                    ->where('is_deleted', 0)
+                    ->exists();
+
+                if ($exists) {
+                    $skipped++;
+                    continue;
+                }
             }
-            //    dd($aadhar);
-            /* 🔹 INSERT */
 
-            $date_of_birth = $this->parseDate($data['date_of_birth'] ?? null);
-            $joining_date  = $this->parseDate($data['joining_date'] ?? null);
+            /* 🔹 Dates */
+            $interview_date = $this->parseDate($this->csvValue($data, 'interview_date'));
 
+            /* 🔹 Insert */
             ContractEmployee::create([
-                'employee_id'      => $data['employee_id'] ?? null,
-                'name'             => $data['name'] ?? null,
-                'date_of_birth'    => $date_of_birth,
-                'father_name'      => $data['father_name'] ?? null,
-                'joining_date'     => $joining_date,
-                'joined_date'      => $joining_date,
-                'interview_date'    => $joining_date,
-                'interview_status'  => 'selected',
-                'aadhar_number'    => $data['aadhar_number'] ?? null,
-                'gender'           => $data['gender'] ?? null,
-                'address'          => $data['address'] ?? null,
-                'phone_number'     => $data['phone_number'] ?? null,
-                'acc_no'           => $data['acc_no'] ?? null,
-                'ifsc_code'        => $data['ifsc_code'] ?? null,
-                'uan_number'       => $data['uan_number'] ?? null,
-                'esic'             => $data['esic'] ?? null,
-
-                'company_id'       => $request->company_id ?? null,
-                // 'interview_date'   => $interview_date,
-                // 'interview_status' => $data['interview_status'] ?? null,
-
-                'joining_status'   => 'joined',
-                'status'           => 1,
-                'is_deleted'       => 0,
-                'created_by'       => $request->created_by ?? null,
-                'role_id'       => $request->role_id ?? null,
+                'name'           => $this->csvValue($data, 'name'),
+                'gender'         => $this->csvValue($data, 'gender'),
+                'marital_status'     => $this->csvValue($data, 'marital_status'),
+                'phone_number'   => $this->csvValue($data, 'phone_number'),
+                'aadhar_number'  => $aadhar,
+                'pan_number'     => $this->csvValue($data, 'pan_number'),
+                'interview_date'  => $interview_date,
+                'company_id'     => $request->company_id,
+                'status'         => 1,
+                'is_deleted'     => 0,
+                'created_by'     => $request->created_by,
+                'role_id'        => $request->role_id,
             ]);
 
             $inserted++;
@@ -449,12 +433,19 @@ class ContactCandidateController extends Controller
         fclose($handle);
 
         return response()->json([
-            'success'   => true,
-            'message'   => 'CSV import completed',
-            'inserted'  => $inserted,
-            'skipped'   => $skipped,
-            'errors'    => $errors // optional
+            'success'  => true,
+            'message'  => 'CSV import completed',
+            'inserted' => $inserted,
+            'skipped'  => $skipped,
+            'errors'   => $errors
         ], 200);
+    }
+
+    private function csvValue(array $data, string $key)
+    {
+        return array_key_exists($key, $data) && $data[$key] !== ''
+            ? $data[$key]
+            : null;
     }
 
     private function parseDate($date)
