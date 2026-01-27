@@ -42,7 +42,6 @@ class WorkReportController extends Controller
         ]);
     }
 
-
     public function show($id)
     {
         $report = WorkReport::find($id);
@@ -114,9 +113,17 @@ class WorkReportController extends Controller
 
         $reports = $query->latest()->get();
 
+        $pssemployees = Employee::where('status', '1')
+        ->where('is_deleted', 0)
+        ->where('id', '!=', 1)
+        // ->where('job_form_referal', 1)
+        ->select('full_name', 'id', 'gen_employee_id')
+        ->get();
+
         return response()->json([
             'status' => true,
-            'data' => $reports
+            'data' => $reports,
+            'employee' => $pssemployees
         ]);
     }
 
