@@ -411,12 +411,20 @@ class ContactCandidateController extends Controller
             /* 🔹 Dates */
             $interview_date = $this->parseDate($this->csvValue($data, 'interview_date'));
 
+            if (!Company::where('id', $request->company_id)->exists()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Invalid company_id'
+                ], 422);
+            }
+
             /* 🔹 Insert */
             ContractEmployee::create([
                 'name'           => $this->csvValue($data, 'name'),
                 'gender'         => $this->csvValue($data, 'gender'),
                 'marital_status'     => $this->csvValue($data, 'marital_status'),
                 'phone_number'   => $this->csvValue($data, 'phone_number'),
+                'address'        => $this->csvValue($data, 'address') ?: 'N/A',
                 'aadhar_number'  => $aadhar,
                 'pan_number'     => $this->csvValue($data, 'pan_number'),
                 'interview_date'  => $interview_date,
@@ -555,7 +563,6 @@ class ContactCandidateController extends Controller
                 'employee_id' => $newEmployeeId
             ]
         ));
-
 
         return response()->json(['success' => true, 'message' => 'Contract Employee created successfully']);
     }
