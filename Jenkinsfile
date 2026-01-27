@@ -16,17 +16,28 @@ pipeline {
   stages {
 
     stage('Checkout (LOCKED TO MAIN)') {
-      steps {
-        sh '''
-          set -e
-          cd ${SERVER_PATH}
-          git fetch origin
-          git reset --hard origin/${DEPLOY_BRANCH}
-          echo "DEPLOYING COMMIT:"
-          git log --oneline -1
-        '''
-      }
-    }
+  steps {
+    sh '''
+      set -e
+
+      echo "Fixing host repo ownership..."
+      sudo chown -R jenkins:jenkins ${SERVER_PATH}
+      sudo chmod -R u+rwX ${SERVER_PATH}
+
+      cd ${SERVER_PATH}
+
+      echo "Fetching main branch..."
+      git fetch origin
+
+      echo "Resetting to origin/${DEPLOY_BRANCH}..."
+      git reset --hard origin/${DEPLOY_BRANCH}
+
+      echo "DEPLOYING COMMIT:"
+      git log --oneline -1
+    '''
+  }
+}
+
 
     stage('Fix Permissions') {
       steps {
