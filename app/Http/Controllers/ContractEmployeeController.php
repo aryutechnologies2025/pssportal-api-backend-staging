@@ -709,11 +709,8 @@ class ContractEmployeeController extends Controller
                 );
             }
             
-            // 🚑 Emergency Contact alias check
-            $emr_contact = $this->csvValue($data, 'emr_contact_number') ?? $this->csvValue($data, 'emergency_contact_number');
-
             /* 🔹 Insert */
-           $emp = ContractCanEmp::create([
+            ContractCanEmp::create([
                 'employee_id'    => $employee_id,
                 'name'           => $this->csvValue($data, 'name'),
                 'date_of_birth'  => $date_of_birth,
@@ -728,7 +725,7 @@ class ContractEmployeeController extends Controller
                 'ifsc_code'      => $this->csvValue($data, 'ifsc_code'),
                 'uan_number'     => $this->csvValue($data, 'uan_number'),
                 'esic'           => $this->csvValue($data, 'esic'),
-                'emr_contact_number' => $emr_contact,
+                'emr_contact_number' => $this->csvValue($data, 'emr_contact_number'),
                 'marital_status'     => $this->csvValue($data, 'marital_status'),
                 'current_address'    => $this->csvValue($data, 'current_address'),
                 'pan_number'     => $this->csvValue($data, 'pan_number'),
@@ -743,16 +740,7 @@ class ContractEmployeeController extends Controller
                 'created_by'     => $request->created_by,
                 'role_id'        => $request->role_id,
             ]);
-            // ➕ This makes it show up in the "Emergency Contacts" list in the UI
-        if ($emr_contact) {
-            \App\Models\ContactDetail::create([
-                'parent_id'   => $emp->id,
-                'parent_type' => 'contract_emp',
-                'name'        => 'Emergency Contact',
-                'relationship'=> 'Imported',
-                'phone_number'=> $emr_contact,
-            ]);
-        }
+          
 
             $inserted++;
         }
