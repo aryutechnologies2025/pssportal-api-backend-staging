@@ -652,8 +652,9 @@ class ContractEmployeeController extends Controller
 
         $header = fgetcsv($handle);
         
-        // 🔧 Clean header: remove line breaks and trim whitespace
+        // 🔧 Clean header: remove BOM, line breaks, and trim whitespace
         $header = array_map(function($col) {
+            $col = preg_replace('/[\x00-\x1F\x7F\xEF\xBB\xBF]/', '', $col); // Remove non-printable and BOM
             return trim(str_replace(["\r", "\n"], '', $col));
         }, $header);
         
@@ -671,13 +672,15 @@ class ContractEmployeeController extends Controller
 
             $data = array_combine($header, $row);
 
-
-
-            // 🔒 Safe read
+            // 🔒 Safe read Aadhar (Handle scientific notation)
             $aadhar = $this->csvValue($data, 'aadhar_number');
+            if ($aadhar && strpos(strtolower($aadhar), 'e+') !== false) {
+                $aadhar = number_format((float)$aadhar, 0, '', '');
+            }
+            
             if (empty($aadhar)) {
-            $skipped++;
-            continue;
+                $skipped++;
+                continue;
             }
 
             // 🔁 Duplicate check only if aadhar exists
@@ -705,6 +708,9 @@ class ContractEmployeeController extends Controller
                     $joining_date
                 );
             }
+            
+            // 🚑 Emergency Contact alias check
+            $emr_contact = $this->csvValue($data, 'emr_contact_number') ?? $this->csvValue($data, 'emergency_contact_number');
 
             /* 🔹 Insert */
             ContractCanEmp::create([
@@ -722,7 +728,7 @@ class ContractEmployeeController extends Controller
                 'ifsc_code'      => $this->csvValue($data, 'ifsc_code'),
                 'uan_number'     => $this->csvValue($data, 'uan_number'),
                 'esic'           => $this->csvValue($data, 'esic'),
-                'emr_contact_number' => $this->csvValue($data, 'emr_contact_number'),
+                'emr_contact_number' => $emr_contact,
                 'marital_status'     => $this->csvValue($data, 'marital_status'),
                 'current_address'    => $this->csvValue($data, 'current_address'),
                 'pan_number'     => $this->csvValue($data, 'pan_number'),
