@@ -272,4 +272,6 @@ class AttendanceReportController extends Controller
             'employees' => $pssemployees
         ]);
     }
+
+    
 }

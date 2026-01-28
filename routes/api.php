@@ -348,6 +348,8 @@ Route::prefix('employee')->group(function () {
         Route::controller(PssEmployeeAttendanceController::class)->group(function () {
             Route::prefix('emp-attendance')->group(function () {
                 Route::get('/', 'index');
+                Route::get('/report', 'empAttendance');
+                Route::get('/monthly-report', 'empMonthlyAttendance');
                 Route::post('/create', 'store');
             });
         });
@@ -368,5 +370,9 @@ Route::prefix('employee')->group(function () {
                 Route::post('/update/{id}', 'update');
             });
         });
+
+        // Attendence Report
+        Route::get('/attendance-report', [AttendanceReportController::class, 'employeeReport']);
+        Route::get('/attendance-report/export', [AttendanceReportController::class, 'employeeReportExport']);
     });
 });
