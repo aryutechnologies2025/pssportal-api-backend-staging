@@ -46,6 +46,7 @@ class LeadManagement extends Model
                 'parent_id',
                 'notes',
                 'followup_status',
+                'scheduled_date',
                 'followup_date',
                 'status',
                 DB::raw("DATE_FORMAT(created_at, '%Y-%m-%d %H:%i:%s') as created_at")
