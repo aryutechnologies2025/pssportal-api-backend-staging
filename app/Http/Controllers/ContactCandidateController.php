@@ -424,7 +424,6 @@ class ContactCandidateController extends Controller
                 'gender'         => $this->csvValue($data, 'gender'),
                 'marital_status'     => $this->csvValue($data, 'marital_status'),
                 'phone_number'   => $this->csvValue($data, 'phone_number'),
-                'address'        => $this->csvValue($data, 'address') ?: 'N/A',
                 'aadhar_number'  => $aadhar,
                 'pan_number'     => $this->csvValue($data, 'pan_number'),
                 'interview_date'  => $interview_date,

@@ -703,7 +703,7 @@ class ContractEmployeeController extends Controller
                 'joining_date'   => $joining_date,
                 'aadhar_number'  => $aadhar,
                 'gender'         => $this->csvValue($data, 'gender'),
-                'address'        => $this->csvValue($data, 'address') ?: 'N/A',
+                'address'        => $this->csvValue($data, 'address'),
                 'phone_number'   => $this->csvValue($data, 'phone_number'),
                 'acc_no'         => $this->csvValue($data, 'acc_no'),
                 'account_number' => $this->csvValue($data, 'account_number'),
