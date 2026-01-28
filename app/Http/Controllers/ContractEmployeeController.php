@@ -651,6 +651,12 @@ class ContractEmployeeController extends Controller
         $handle = fopen($file->getRealPath(), 'r');
 
         $header = fgetcsv($handle);
+        
+        // 🔧 Clean header: remove line breaks and trim whitespace
+        $header = array_map(function($col) {
+            return trim(str_replace(["\r", "\n"], '', $col));
+        }, $header);
+        
         $inserted = 0;
         $skipped  = 0;
         $errors   = [];
