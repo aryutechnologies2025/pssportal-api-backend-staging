@@ -713,7 +713,7 @@ class ContractEmployeeController extends Controller
             $emr_contact = $this->csvValue($data, 'emr_contact_number') ?? $this->csvValue($data, 'emergency_contact_number');
 
             /* 🔹 Insert */
-            ContractCanEmp::create([
+           $emp = ContractCanEmp::create([
                 'employee_id'    => $employee_id,
                 'name'           => $this->csvValue($data, 'name'),
                 'date_of_birth'  => $date_of_birth,
@@ -743,6 +743,16 @@ class ContractEmployeeController extends Controller
                 'created_by'     => $request->created_by,
                 'role_id'        => $request->role_id,
             ]);
+            // ➕ This makes it show up in the "Emergency Contacts" list in the UI
+        if ($emr_contact) {
+            \App\Models\ContactDetail::create([
+                'parent_id'   => $emp->id,
+                'parent_type' => 'contract_emp',
+                'name'        => 'Emergency Contact',
+                'relationship'=> 'Imported',
+                'phone_number'=> $emr_contact,
+            ]);
+        }
 
             $inserted++;
         }
