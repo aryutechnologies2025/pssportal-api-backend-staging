@@ -741,12 +741,21 @@ class ContractEmployeeController extends Controller
     }
 
 
+    // private function csvValue(array $data, string $key)
+    // {
+    //     return array_key_exists($key, $data) && $data[$key] !== ''
+    //         ? $data[$key]
+    //         : null;
+    // }
     private function csvValue(array $data, string $key)
     {
-        return array_key_exists($key, $data) && $data[$key] !== ''
-            ? $data[$key]
-            : null;
+        if (!array_key_exists($key, $data) || $data[$key] === '') {
+            return null;
+        }
+
+        return mb_convert_encoding($data[$key], 'UTF-8', 'UTF-8,ISO-8859-1,Windows-1252');
     }
+
 
 
 
