@@ -671,8 +671,14 @@ class ContractEmployeeController extends Controller
 
             $data = array_combine($header, $row);
 
+
+
             // 🔒 Safe read
             $aadhar = $this->csvValue($data, 'aadhar_number');
+            if (empty($aadhar)) {
+            $skipped++;
+            continue;
+            }
 
             // 🔁 Duplicate check only if aadhar exists
             if ($aadhar) {
