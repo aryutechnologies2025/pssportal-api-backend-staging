@@ -55,6 +55,7 @@ class ContractEmployeeController extends Controller
                 'success' => false,
                 'message' => 'This Aadhar number is already registered.',
                 'existing_id' => $existingEmp->id,
+                'type' => 'employee',
             ], 409);
         }
 
@@ -300,6 +301,7 @@ class ContractEmployeeController extends Controller
                 'success' => false,
                 'message' => 'This Aadhaar number is already registered.',
                 'existing_id' => $existingAadhar->id,
+                'type' => 'employee',
                 'field' => 'aadhar_number'
             ], 409);
         }
@@ -879,7 +881,7 @@ class ContractEmployeeController extends Controller
         return response()->json(['success' => true, 'data' => $rejoinstatus]);
     }
 
-    public function RejoinStatusUpdate(Request $request, $id)
+    public function RejoinStatusUpdate(Request $request)
     {
         // //emp rejoing details
         // $rejoing_data = [
