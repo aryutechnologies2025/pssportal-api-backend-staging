@@ -146,6 +146,25 @@ class AttendanceController extends Controller
     /**
      * VIEW SINGLE ATTENDANCE
      */
+    // public function show($id)
+    // {
+    //     $attendance = Attendance::with([
+    //         'company:id,company_name',
+    //         'details.contractEmployee',
+    //         'shifts'
+    //     ])->findOrFail($id);
+
+    //     $shifts = CompanyShifts::where('parent_id', $attendance->company_id)
+    //         ->where('is_deleted', 0)
+    //         ->get();
+
+    //     return response()->json([
+    //         'success' => true,
+    //         'data'    => $attendance,
+    //         'shifts' => $shifts
+    //     ]);
+    // }
+
     public function show($id)
     {
         $attendance = Attendance::with([
@@ -154,6 +173,19 @@ class AttendanceController extends Controller
             'shifts'
         ])->findOrFail($id);
 
+        // ✅ Attendance counts
+        $presentCount = $attendance->details
+            ->where('attendance', 'P')   // or 'present'
+            ->count();
+
+        $absentCount = $attendance->details
+            ->where('attendance', 'A')   // or 'absent'
+            ->count();
+
+        $notMarkedCount = $attendance->details
+            ->whereNull('attendance')
+            ->count();
+
         $shifts = CompanyShifts::where('parent_id', $attendance->company_id)
             ->where('is_deleted', 0)
             ->get();
@@ -161,9 +193,16 @@ class AttendanceController extends Controller
         return response()->json([
             'success' => true,
             'data'    => $attendance,
-            'shifts' => $shifts
+            'shifts'  => $shifts,
+            'counts'  => [
+                'present'    => $presentCount,
+                'absent'     => $absentCount,
+                'not_marked' => $notMarkedCount,
+                'total'      => $attendance->details->count()
+            ]
         ]);
     }
+
 
     /**
      * UPDATE ATTENDANCE
@@ -443,7 +482,7 @@ class AttendanceController extends Controller
         }
     }
 
-     private function parseDate($date)
+    private function parseDate($date)
     {
         if (empty($date)) {
             return null;
