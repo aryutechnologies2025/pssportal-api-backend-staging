@@ -22,15 +22,35 @@ class ContactCandidateController extends Controller
     public function store(Request $request)
     {
 
-        $existingEmp = ContractEmployee::where('aadhar_number', $request->aadhar_number)
+        /* ============================
+       STEP 1: CHECK IN EMPLOYEE TABLE
+       ============================ */
+        $existingEmployee = ContractCanEmp::where('aadhar_number', $request->aadhar_number)
             ->where('is_deleted', 0)
             ->first();
 
-        if ($existingEmp) {
+        if ($existingEmployee) {
             return response()->json([
-                'success' => false,
-                'message' => 'This Aadhar number is already registered.',
-                'existing_id' => $existingEmp->id,
+                'success'     => false,
+                'message'     => 'This Aadhar number is already registered as Employee.',
+                'existing_id' => $existingEmployee->id,
+                'type'        => 'employee',
+            ], 409);
+        }
+
+        /* ============================
+       STEP 2: CHECK IN CANDIDATE TABLE
+       ============================ */
+        $existingCandidate = ContractEmployee::where('aadhar_number', $request->aadhar_number)
+            ->where('is_deleted', 0)
+            ->first();
+
+        if ($existingCandidate) {
+            return response()->json([
+                'success'     => false,
+                'message'     => 'This Aadhar number is already registered as Candidate.',
+                'existing_id' => $existingCandidate->id,
+                'type'        => 'candidate',
             ], 409);
         }
 
@@ -234,17 +254,38 @@ class ContactCandidateController extends Controller
     {
         $emp = ContractEmployee::where('id', $id)->where('is_deleted', 0)->firstOrFail();
 
-        $existingAadhar = ContractEmployee::where('aadhar_number', $request->aadhar_number)
+        /* ============================
+       STEP 1: CHECK IN EMPLOYEE TABLE
+       ============================ */
+        $existingEmployee = ContractCanEmp::where('aadhar_number', $request->aadhar_number)
+            ->where('is_deleted', 0)
+            ->first();
+
+        if ($existingEmployee) {
+            return response()->json([
+                'success'     => false,
+                'message'     => 'This Aadhaar number is already registered as Employee.',
+                'existing_id' => $existingEmployee->id,
+                'type'        => 'employee',
+                'field'       => 'aadhar_number'
+            ], 409);
+        }
+
+        /* ============================
+       STEP 2: CHECK IN CANDIDATE TABLE (EXCLUDE CURRENT ID)
+       ============================ */
+        $existingCandidate = ContractEmployee::where('aadhar_number', $request->aadhar_number)
             ->where('is_deleted', 0)
             ->where('id', '!=', $id)
             ->first();
 
-        if ($existingAadhar) {
+        if ($existingCandidate) {
             return response()->json([
-                'success' => false,
-                'message' => 'This Aadhaar number is already registered.',
-                'existing_id' => $existingAadhar->id,
-                'field' => 'aadhar_number'
+                'success'     => false,
+                'message'     => 'This Aadhaar number is already registered as Candidate.',
+                'existing_id' => $existingCandidate->id,
+                'type'        => 'candidate',
+                'field'       => 'aadhar_number'
             ], 409);
         }
 
