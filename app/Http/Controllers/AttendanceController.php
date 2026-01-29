@@ -175,11 +175,11 @@ class AttendanceController extends Controller
 
         // ✅ Attendance counts
         $presentCount = $attendance->details
-            ->where('attendance', 'P')   // or 'present'
+            ->where('attendance', '1')   // or 'present'
             ->count();
 
         $absentCount = $attendance->details
-            ->where('attendance', 'A')   // or 'absent'
+            ->where('attendance', '0')   // or 'absent'
             ->count();
 
         $notMarkedCount = $attendance->details
