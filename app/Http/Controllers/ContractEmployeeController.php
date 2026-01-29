@@ -724,6 +724,7 @@ class ContractEmployeeController extends Controller
                 'account_number' => $this->csvValue($data, 'account_number'),
                 'ifsc_code'      => $this->csvValue($data, 'ifsc_code'),
                 'uan_number'     => $this->csvValue($data, 'uan_number'),
+                'pincode'     => $this->csvValue($data, 'pincode'),
                 'esic'           => $this->csvValue($data, 'esic'),
                 'emr_contact_number' => $this->csvValue($data, 'emr_contact_number'),
                 'marital_status'     => $this->csvValue($data, 'marital_status'),
