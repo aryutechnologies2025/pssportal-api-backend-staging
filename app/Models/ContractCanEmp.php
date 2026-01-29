@@ -9,8 +9,6 @@ class ContractCanEmp extends Model
 {
     use HasFactory;
 
-    use HasFactory;
-
     protected $fillable = [
         'company_id',
         'name', //
@@ -41,8 +39,10 @@ class ContractCanEmp extends Model
         'branch_name',
         'bank_name',
         'boarding_point_id',
-        'education_id'
+        'education_id',
+        'pincode'
     ];
+
 
     public function company()
     {

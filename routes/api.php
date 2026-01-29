@@ -135,7 +135,7 @@ Route::middleware('static.auth')->group(function () {
             Route::post('/import', 'import');
             Route::post('/assign-emp-generate', 'getEmpidGenearate');
             Route::get('/emp-rejoing-list', 'RejoinStatusList');
-             Route::get('/emp-rejoing-create', 'RejoinStatusUpdate');
+            Route::post('/emp-rejoing-create', 'RejoinStatusUpdate');
         });
     });
 
