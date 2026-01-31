@@ -34,8 +34,8 @@ class EmployeeController extends Controller
 
         $employees = Employee::where('is_deleted', 0)
             ->with(['role'])
-
             ->select('full_name', 'phone_no', 'email', 'role_id', 'job_form_referal', 'company_id', 'id', 'status', 'jb_referal')
+
             ->where('id', '!=', 1)
             ->when($request->filled('role_id'), function ($q) use ($request) {
                 $q->where('role_id', $request->role_id);

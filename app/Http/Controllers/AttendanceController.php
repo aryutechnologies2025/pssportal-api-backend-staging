@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Validator;
 use App\Models\Employee;
 use App\Models\CompanyShifts;
 use Carbon\Carbon;
+use App\Models\AttendanceShiftDetails;
 
 class AttendanceController extends Controller
 {
@@ -69,8 +70,18 @@ class AttendanceController extends Controller
                     'attendance_id' => $attendance->id,
                     'employee_id'   => $emp['employee_id'], // contract employee id
                     'attendance'    => $emp['attendance'],
-                    'shift_id'      => $emp['shift_id']
+                    // 'shift_id'      => $emp['shift_id']
                 ]);
+
+                if (!empty($emp['shift_details'])) {
+                    AttendanceShiftDetails::create([
+                        'attendance_id' => $attendance->id,
+                        'employee_id'   => $emp['employee_id'],
+                        'shift_id'      => $emp['shift_details']['shift_id'],
+                        'start_time'    => $emp['shift_details']['start_time'],
+                        'end_time'      => $emp['shift_details']['end_time'],
+                    ]);
+                }
             }
 
             DB::commit();
