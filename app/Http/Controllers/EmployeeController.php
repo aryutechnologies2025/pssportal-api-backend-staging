@@ -34,7 +34,7 @@ class EmployeeController extends Controller
 
         $employees = Employee::where('is_deleted', 0)
             ->with(['role'])
-            ->select('full_name', 'role_id', 'job_form_referal', 'company_id', 'id', 'status', 'jp_referal')
+            ->select('full_name', 'role_id', 'job_form_referal', 'company_id', 'id', 'status', 'jb_referal')
             ->where('id', '!=', 1)
             ->when($request->filled('role_id'), function ($q) use ($request) {
                 $q->where('role_id', $request->role_id);
@@ -1090,10 +1090,12 @@ class EmployeeController extends Controller
     public function jobreferalupdate(Request $request, $id)
     {
         $emp = Employee::where('id', $id)->where('is_deleted', 0)->firstOrFail();
-        if ($request->type == 'internal') {
-            $emp->update(['jp_referal' => $request->job_form_referal]);
+        if ($request->type == 'external') {
+            $emp->jb_referal = $request->job_form_ext_referal;
+            $emp->save();
         } else {
-            $emp->update(['job_form_referal' => $request->job_form_referal]);
+            $emp->job_form_referal = $request->job_form_referal;
+            $emp->save();
         }
 
 
