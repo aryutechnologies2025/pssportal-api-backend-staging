@@ -34,6 +34,7 @@ use App\Http\Controllers\FinanceController;
 use App\Http\Controllers\BoardingPointController;
 use App\Http\Controllers\EductionController;
 use App\Http\Controllers\AnnouncementController;
+use App\Http\Controllers\LeadCategoryController;
 /*
 |--------------------------------------------------------------------------
 | API Routes
@@ -232,6 +233,18 @@ Route::middleware('static.auth')->group(function () {
         Route::post('/status-update/{id}', [LeadManagementController::class, 'statusUpdate']);
         Route::post('/status-list/{id}', [LeadManagementController::class, 'statusList']);
     });
+
+
+    Route::controller(LeadCategoryController::class)->group(function () {
+        Route::prefix('lead-category')->group(function () {
+            Route::get('/', 'index');
+            Route::post('/create', 'store');
+            Route::get('/edit/{id}', 'edit_form');
+            Route::post('/update/{id}', 'update');
+            Route::delete('/delete', 'delete');
+        });
+    });
+
 
     //attendance report
     Route::controller(AttendanceReportController::class)->group(function () {

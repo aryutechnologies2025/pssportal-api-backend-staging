@@ -46,7 +46,7 @@ class LeadManagementController extends Controller
             Carbon::parse($request->to_date)->endOfDay(),
             ]);
         }
-    );
+        );
         $data = $query->latest()->get();
 
         $age = LeadManagement::where('is_deleted', '0')

@@ -874,9 +874,9 @@ class ContractEmployeeController extends Controller
         ]);
     }
 
-    public function RejoinStatusList()
+    public function RejoinStatusList(Request $request)
     {
-        $rejoinstatus = EmpRejoinLogs::with(['employee','company','boardingPoint'])->get();
+        $rejoinstatus = EmpRejoinLogs::with(['employee','company','boardingPoint'])->where('parent_id', $request->employee_id)->get();
 
         return response()->json(['success' => true, 'data' => $rejoinstatus]);
     }
