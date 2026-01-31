@@ -17,6 +17,7 @@ class Company extends Model
         'gst_number',
         'website_url',
         'phone_number',
+        'target',
         'support_email',
         'billing_email',
         'status',

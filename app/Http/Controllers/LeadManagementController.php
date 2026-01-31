@@ -246,44 +246,70 @@ class LeadManagementController extends Controller
             ], 422);
         }
 
-        // Read file contents & convert UTF-16 → UTF-8
         $content = file_get_contents($file->getRealPath());
-        $content = mb_convert_encoding($content, 'UTF-8', 'UTF-16LE');
 
-        // Save to temp stream
+        // 🔹 More robust encoding detection and conversion
+        $encoding = mb_detect_encoding($content, ['UTF-8', 'UTF-16LE', 'UTF-16BE', 'ISO-8859-1', 'Windows-1252'], true);
+        if ($encoding && $encoding !== 'UTF-8') {
+            $content = mb_convert_encoding($content, 'UTF-8', $encoding);
+        }
+
+        // 🔹 Final fallback: Sanitize non-UTF8 characters just in case
+        $content = mb_convert_encoding($content, 'UTF-8', 'UTF-8');
+
+        // 🔹 Use temp stream
         $temp = fopen('php://temp', 'r+');
         fwrite($temp, $content);
         rewind($temp);
 
-        // TAB delimited
-        $header = fgetcsv($temp, 0, "\t");
+        // 🔹 Auto-detect Delimiter (, or \t)
+        $firstLine = fgets($temp);
+        rewind($temp);
+        $delimiter = (strpos($firstLine, "\t") !== false && strpos($firstLine, ",") === false) ? "\t" : ",";
 
-        // Remove BOM from first column
-        if (isset($header[0])) {
-            $header[0] = preg_replace('/^\xEF\xBB\xBF/', '', $header[0]);
+        $header = fgetcsv($temp, 0, $delimiter);
+        if (!$header) {
+            return response()->json(['success' => false, 'message' => 'CSV file is empty'], 422);
         }
+
+        // 🔹 Clean & Standardize Headers
+        $header = array_map(function ($h) {
+            $h = preg_replace('/^\xEF\xBB\xBF/', '', $h); // Remove BOM
+            $h = preg_replace('/[\x00-\x1F\x7F]/', '', $h); // Remove non-printable
+            return strtolower(trim(str_replace(' ', '_', $h)));
+        }, $header);
 
         $inserted = 0;
         $skipped  = 0;
 
-        while (($row = fgetcsv($temp, 0, "\t")) !== false) {
-
+        while (($row = fgetcsv($temp, 0, $delimiter)) !== false) {
             if (count($header) !== count($row)) {
                 $skipped++;
                 continue;
             }
 
+            // Clean row data (remove potential encoding issues per cell)
+            $row = array_map(function($val) {
+                return $val ? mb_convert_encoding($val, 'UTF-8', 'UTF-8') : $val;
+            }, $row);
+
             $data = array_combine($header, $row);
 
-            // 🔹 Clean phone
-            $rawPhone = $data['phone'] ?? null;
-            $phone = $rawPhone ? preg_replace('/[^0-9]/', '', $rawPhone) : null;
-
-            if (!$phone) {
+            // 🔹 Clean & Normalize phone
+            $rawPhone = $data['phone'] ?? $data['phone_number'] ?? $data['contact'] ?? null;
+            if (!$rawPhone) {
                 $skipped++;
                 continue;
             }
 
+            // Handle scientific notation (e.g. 9.87E+09)
+            if (is_numeric($rawPhone) && strpos(strtolower($rawPhone), 'e+') !== false) {
+                $rawPhone = number_format((float)$rawPhone, 0, '', '');
+            }
+
+            $phone = $this->normalizePhone($rawPhone);
+
+            // 🔍 Check existing by phone
             $exists = LeadManagement::where('phone', $phone)
                 ->where('is_deleted', '0')
                 ->exists();
@@ -293,14 +319,14 @@ class LeadManagementController extends Controller
                 continue;
             }
 
-            $date_of_birth  = $this->parseDate($data['date_of_birth'] ?? null);
+            $date_of_birth  = $this->parseDate($data['date_of_birth'] ?? $data['dob'] ?? null);
+            $parsedCreatedTime = $data['created_time'] ?? $data['created_at'] ?? null;
+            $createdTime    = $parsedCreatedTime ? $this->parseDateTime($parsedCreatedTime) : date('Y-m-d H:i:s');
 
-            $createdTime = $this->parseDateTime($data['created_time'] ?? null);
-
+            if (!$createdTime) $createdTime = date('Y-m-d H:i:s');
 
             // 🔹 Normalize gender
             $rawGender = strtolower(trim($data['gender'] ?? ''));
-
             if (in_array($rawGender, ['male', 'm'])) {
                 $gender = 'male';
             } elseif (in_array($rawGender, ['female', 'f'])) {
@@ -310,19 +336,16 @@ class LeadManagementController extends Controller
             }
 
             $age = null;
-
             if ($date_of_birth) {
                 try {
-                    $age = Carbon::parse($date_of_birth)->age; // auto calculates from today
+                    $age = Carbon::parse($date_of_birth)->age;
                 } catch (\Exception $e) {
                     $age = null;
                 }
             }
 
-
-
             LeadManagement::create([
-                'lead_id'       => $data['id'] ?? null,
+                'lead_id'       => $data['id'] ?? $data['lead_id'] ?? null,
                 'created_time'  => $createdTime,
                 'ad_id'         => $data['ad_id'] ?? null,
                 'ad_name'       => $data['ad_name'] ?? null,
@@ -332,16 +355,13 @@ class LeadManagementController extends Controller
                 'campaign_name' => $data['campaign_name'] ?? null,
                 'form_id'       => $data['form_id'] ?? null,
                 'form_name'     => $data['form_name'] ?? null,
-                'is_organic'    => $data['is_organic'] ?? null,
-                // 'is_organic' => isset($data['is_organic'])
-                //     ? ($data['is_organic'] === true || $data['is_organic'] === 'true' || $data['is_organic'] == 1 ? 1 : 0)
-                //     : null,
-                'platform'      => $data['platform'] ?? null,
-                'full_name'     => $data['full_name'] ?? null,
+                'is_organic'    => isset($data['is_organic']) ? ($data['is_organic'] == 'true' || $data['is_organic'] == 1 ? 1 : 0) : 0,
+                'platform'      => $data['platform'] ?? 'csv_import',
+                'full_name'     => $data['full_name'] ?? $data['name'] ?? null,
                 'gender'        => $gender,
                 'phone'         => $phone,
-                'date_of_birth' => $date_of_birth ?? null,
-                'post_code'     => $data['post_code'] ?? null,
+                'date_of_birth' => $date_of_birth,
+                'post_code'     => $data['post_code'] ?? $data['pincode'] ?? $data['zip'] ?? null,
                 'city'          => $data['city'] ?? null,
                 'state'         => $data['state'] ?? null,
                 'age'           => $age,

@@ -14,57 +14,8 @@ class CompanyController extends Controller
 {
     public function store(Request $request)
     {
-        // $validator = Validator::make($request->all(), [
-
-        //     'gst_number' => [
-        //         Rule::unique('companies', 'gst_number')
-        //             ->where(fn($q) => $q->where('is_deleted', 0)),
-        //     ],
-
-        //     // 'website_url' => [
-        //     //     'required',
-        //     //     Rule::unique('companies', 'website_url')
-        //     //         ->where(fn($q) => $q->where('is_deleted', 0)),
-        //     // ],
-
-        //     'support_email' => [
-        //         'required',
-        //         'email',
-        //         Rule::unique('companies', 'support_email')
-        //             ->where(fn($q) => $q->where('is_deleted', 0)),
-        //     ],
-
-        //     'billing_email' => [
-        //         'required',
-        //         'email',
-        //         Rule::unique('companies', 'billing_email')
-        //             ->where(fn($q) => $q->where('is_deleted', 0)),
-        //     ],
-        // ], [
-        //     'gst_number.unique'    => 'GST number already exists.',
-        //     'support_email.unique' => 'Support email already exists.',
-        //     'billing_email.unique' => 'Billing email already exists.',
-        // ]);
-
-        // if ($validator->fails()) {
-        //     return response()->json([
-        //         'success' => false,
-        //         'message' => 'Validation failed',
-        //         'errors'  => $validator->errors(),
-        //     ], 422);
-        // }
-
 
         $company = Company::create($request->all());
-
-        // Notes
-        // if ($request->filled('notes')) {
-        //     NoteAttachment::create([
-        //         'parent_id'   => $company->id,
-        //         'parent_type' => 'company',
-        //         'notes'       => $request->notes,
-        //     ]);
-        // }
 
         // Contacts
         if (is_array($request->contact_details)) {
@@ -78,21 +29,6 @@ class CompanyController extends Controller
                 ]);
             }
         }
-
-        //shifts
-
-        // if (is_array($request->shiftdetails)) {
-        //     foreach ($request->shiftdetails as $shift) {
-        //         CompanyShifts::create([
-        //             'parent_id'   => $company->id,
-        //             'shift_name'        => $shift['shift_name'],
-        //             'start_time'        => $shift['start_time'] ?? null,
-        //             'end_time' => $shift['end_time'],
-        //             'created_by' => $request->created_by,
-        //             'company_shift_id' => 'PSSCC'.$company->id.'001'
-        //         ]);
-        //     }
-        // }
 
         if (is_array($request->shiftdetails)) {
 
@@ -125,7 +61,6 @@ class CompanyController extends Controller
             }
         }
 
-
         return response()->json([
             'success' => true,
             'message' => 'Company created successfully'
@@ -137,7 +72,7 @@ class CompanyController extends Controller
         $companies = Company::where('is_deleted', 0)
             // ->with(['contacts', 'shifts'])
             ->latest()
-            ->select('id', 'company_name', 'website_url', 'support_email', 'billing_email', 'gst_number', 'status', 'created_at', 'phone_number')
+            ->select('id', 'company_name', 'website_url', 'support_email', 'billing_email', 'gst_number', 'status', 'created_at', 'target', 'phone_number')
             ->get();
 
         return response()->json([
@@ -162,71 +97,10 @@ class CompanyController extends Controller
     public function update(Request $request, $id)
     {
 
-        // $validator = Validator::make($request->all(), [
-
-        //     'gst_number' => [
-        //         Rule::unique('companies', 'gst_number')
-        //             ->ignore($id)
-        //             ->where(fn($q) => $q->where('is_deleted', 0)),
-        //     ],
-
-        //     // 'website_url' => [
-        //     //     'required',
-        //     //     Rule::unique('companies', 'website_url')
-        //     //         ->ignore($id)
-        //     //         ->where(fn($q) => $q->where('is_deleted', 0)),
-        //     // ],
-
-        //     'support_email' => [
-        //         'required',
-        //         'email',
-        //         Rule::unique('companies', 'support_email')
-        //             ->ignore($id)
-        //             ->where(fn($q) => $q->where('is_deleted', 0)),
-        //     ],
-
-        //     'billing_email' => [
-        //         'required',
-        //         'email',
-        //         Rule::unique('companies', 'billing_email')
-        //             ->ignore($id)
-        //             ->where(fn($q) => $q->where('is_deleted', 0)),
-        //     ],
-
-        // ], [
-        //     'gst_number.unique'    => 'GST number already exists.',
-        //     // 'website_url.unique'   => 'Website URL already exists.',
-        //     'support_email.unique' => 'Support email already exists.',
-        //     'billing_email.unique' => 'Billing email already exists.',
-        // ]);
-
-        // if ($validator->fails()) {
-        //     return response()->json([
-        //         'success' => false,
-        //         'message' => 'Validation failed',
-        //         'errors'  => $validator->errors(),
-        //     ], 422);
-        // }
-
         $company = Company::findOrFail($id);
-
-        // $request->validate([
-        //     'gst_number'    => 'unique:companies,gst_number,' . $id,
-        //     // 'website_url'   => 'unique:companies,website_url,' . $id,
-        //     'support_email' => 'unique:companies,support_email,' . $id,
-        //     'billing_email' => 'unique:companies,billing_email,' . $id,
-        // ]);
 
         $company->update($request->all());
 
-        // // Notes
-        // if ($request->filled('notes')) {
-        //     NoteAttachment::create([
-        //         'parent_id'   => $id,
-        //         'parent_type' => 'company',
-        //         'notes'       => $request->notes,
-        //     ]);
-        // }
 
         // Replace contacts
         ContactDetail::where('parent_id', $id)
@@ -244,22 +118,6 @@ class CompanyController extends Controller
                 ]);
             }
         }
-
-
-        //shifts
-        // CompanyShifts::where('parent_id', $id)
-        //     ->delete();
-        // if (is_array($request->shiftdetails)) {
-        //     foreach ($request->shiftdetails as $shift) {
-        //         CompanyShifts::create([
-        //             'parent_id'   => $company->id,
-        //             'shift_name'        => $shift['shift_name'],
-        //             'start_time'        => $shift['start_time'] ?? null,
-        //             'end_time' => $shift['end_time'],
-        //             'created_by' => $request->created_by
-        //         ]);
-        //     }
-        // }
 
         // 🔹 Delete old shifts
         CompanyShifts::where('parent_id', $id)->delete();
