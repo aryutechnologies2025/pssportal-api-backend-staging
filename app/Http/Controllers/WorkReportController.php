@@ -96,7 +96,8 @@ class WorkReportController extends Controller
 
     public function filterByDate(Request $request)
     {
-        $query = WorkReport::query();
+        // $query = WorkReport::query();
+        $query = WorkReport::with('employee');
 
         if ($request->from_date && $request->to_date) {
             $query->whereBetween('report_date', [
@@ -122,8 +123,7 @@ class WorkReportController extends Controller
 
         return response()->json([
             'status' => true,
-            'data' => $reports,
-            'employee' => $pssemployees
+            'data' => $reports,  
         ]);
     }
 
