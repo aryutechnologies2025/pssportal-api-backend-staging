@@ -17,4 +17,10 @@ class AttendanceShiftDetails extends Model
         'start_time',
         'end_time',
     ];
+
+    public function shift()
+    {
+        return $this->belongsTo(CompanyShifts::class, 'shift_id')
+            ->select('id', 'shift_name');
+    }
 }

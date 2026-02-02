@@ -181,7 +181,8 @@ class AttendanceController extends Controller
         $attendance = Attendance::with([
             'company:id,company_name',
             'details.contractEmployee',
-            'shifts'
+            'shifts',
+            'details.shiftDetails.shift'
         ])->findOrFail($id);
 
         // ✅ Attendance counts
@@ -238,8 +239,20 @@ class AttendanceController extends Controller
                     'attendance_id' => $id,
                     'employee_id'   => $emp['employee_id'],
                     'attendance'    => $emp['attendance'],
-                    'shift_id'      => $emp['shift_id']
+                    // 'shift_id'      => $emp['shift_id']
                 ]);
+
+
+                // ✅ Shift update / add
+                if (!empty($emp['shift_details'])) {
+                    AttendanceShiftDetails::create([
+                        'attendance_id' => $id,
+                        'employee_id'   => $emp['employee_id'],
+                        'shift_id'      => $emp['shift_details']['shift_id'],
+                        'start_time'    => $emp['shift_details']['start_time'],
+                        'end_time'      => $emp['shift_details']['end_time'],
+                    ]);
+                }
             }
 
             DB::commit();
