@@ -58,11 +58,11 @@ Route::get('/health', function () {
 
 Route::post('/login', [AdminController::class, 'login']);
 
+Route::get('/contract-dashboard', [ContractDashboardController::class, 'index']);
 Route::middleware('static.auth')->group(function () {
     //login
     Route::post('/logout', [AdminController::class, 'logout']);
     Route::get('/dashboard', [DashboardController::class, 'list']);
-    Route::get('/contract-dashboard', [ContractDashboardController::class, 'index']);
 
     Route::prefix('job-form')->controller(JobFormController::class)->group(function () {
         Route::post('/pss-job-form', 'pssEnquirystore');
