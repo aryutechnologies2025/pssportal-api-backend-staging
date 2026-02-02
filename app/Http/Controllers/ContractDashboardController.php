@@ -88,11 +88,11 @@ class ContractDashboardController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Contract dashboard data fetched successfully',
-            'data' => [
-                'interviews' => $interviews,
-                'joining' => $joining,
-                'relieved' => $relieved,
-            ],
+            // 'data' => [
+            //     'interviews' => $interviews,
+            //     'joining' => $joining,
+            //     'relieved' => $relieved,
+            // ],
         ]);
     }
 }
