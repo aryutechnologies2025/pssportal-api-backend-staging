@@ -18,9 +18,15 @@ class LeadCategoryController extends Controller
         ]);
     }
 
-    public function index()
+    public function index(Request $request)
     {
-        $lead_categories = LeadManagementCategory::where('is_deleted', '0')->get();
+        $query = LeadManagementCategory::where('is_deleted', '0');
+
+        if($request->has('status') && $request->status !== '') {
+            $query->where('status', $request->status);
+        }
+
+        $lead_categories = $query->get();
 
         return response()->json([
             'success' => true,

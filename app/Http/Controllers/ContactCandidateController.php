@@ -137,6 +137,10 @@ class ContactCandidateController extends Controller
             ->when($request->filled('education'), function ($q) use ($request) {
                 $q->where('education', $request->education);
             })
+            // Add company filter here
+            ->when($request->filled('company_id'), function ($q) use ($request) {
+            $q->where('company_id', $request->company_id);
+            })
             ->when($request->filled('from_date') && $request->filled('to_date'), function ($q) use ($request) {
                 $from = Carbon::parse($request->from_date)->startOfDay();
                 $to   = Carbon::parse($request->to_date)->endOfDay();
