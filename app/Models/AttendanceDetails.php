@@ -50,10 +50,10 @@ class AttendanceDetails extends Model
 
     public function shiftDetails()
     {
-        return $this->hasOne(
+        return $this->hasMany(
             AttendanceShiftDetails::class,
             'attendance_id',
-            'attendance_id'
-        )->whereColumn('employee_id', 'attendance_details.employee_id');
+            'id'
+        );
     }
 }

@@ -17,7 +17,7 @@ return new class extends Migration
                 ->constrained('attendance_details')
                 ->cascadeOnDelete();
             $table->foreignId('employee_id')
-                ->constrained('contract_employees')
+                ->constrained('contract_can_emps')
                 ->cascadeOnDelete();
             $table->foreignId('shift_id')
                 ->constrained('companies_shift')
