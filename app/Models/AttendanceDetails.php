@@ -32,7 +32,7 @@ class AttendanceDetails extends Model
     // ✅ ADD THIS
     public function contractEmployee()
     {
-        return $this->belongsTo(ContractCanEmp::class, 'employee_id')->select('id', 'name');
+        return $this->belongsTo(ContractCanEmp::class, 'employee_id')->select('id', 'name','employee_id');
     }
 
 
