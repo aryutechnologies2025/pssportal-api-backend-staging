@@ -4,7 +4,7 @@ pipeline {
   environment {
     SERVER_PATH = "/var/www/staging/pssportal-api-backend"
     LIVE_CONTAINER = "staging_api"
-    LIVE_PORT = "8000"
+    LIVE_PORT = "8001"
     DEPLOY_BRANCH = "main"
   }
 
