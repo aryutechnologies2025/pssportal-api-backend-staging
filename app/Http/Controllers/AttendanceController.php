@@ -237,23 +237,23 @@ class AttendanceController extends Controller
             AttendanceDetails::where('attendance_id', $id)->delete();
 
             foreach ($request->employees as $emp) {
-                AttendanceDetails::create([
-                    'attendance_id' => $id,
-                    'employee_id'   => $emp['employee_id'],
+                $attendanceDetail = AttendanceDetails::create([
+                    'attendance_id' => $attendance->id,
+                    'employee_id'   => $emp['employee_id'], // contract employee id
                     'attendance'    => $emp['attendance'],
                     // 'shift_id'      => $emp['shift_id']
                 ]);
 
-
-                // ✅ Shift update / add
-                if (!empty($emp['shift_details'])) {
-                    AttendanceShiftDetails::create([
-                        'attendance_id' => $id,
-                        'employee_id'   => $emp['employee_id'],
-                        'shift_id'      => $emp['shift_details']['shift_id'],
-                        'start_time'    => $emp['shift_details']['start_time'],
-                        'end_time'      => $emp['shift_details']['end_time'],
-                    ]);
+                if (!empty($emp['shift_details']) && is_array($emp['shift_details'])) {
+                    foreach ($emp['shift_details'] as $shift) {
+                        AttendanceShiftDetails::create([
+                            'attendance_id' => $attendanceDetail->id,
+                            'employee_id'   => $emp['employee_id'],
+                            'shift_id'      => $shift['shift_id'],
+                            'start_time'    => $shift['start_time'],
+                            'end_time'      => $shift['end_time'],
+                        ]);
+                    }
                 }
             }
 

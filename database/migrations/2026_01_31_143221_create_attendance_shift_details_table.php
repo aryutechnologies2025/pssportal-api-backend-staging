@@ -23,8 +23,8 @@ return new class extends Migration
                 ->constrained('companies_shift')
                 ->cascadeOnDelete();
             // $table->date('shift_date');
-            $table->time('start_time');
-            $table->time('end_time');
+            $table->string('start_time');
+            $table->string('end_time');
             $table->timestamps();
         });
     }
