@@ -34,7 +34,10 @@ use App\Http\Controllers\FinanceController;
 use App\Http\Controllers\BoardingPointController;
 use App\Http\Controllers\EductionController;
 use App\Http\Controllers\AnnouncementController;
+use App\Http\Controllers\ContractDashboardController;
 use App\Http\Controllers\LeadCategoryController;
+use App\Http\Controllers\MonthlyReportController;
+
 /*
 |--------------------------------------------------------------------------
 | API Routes
@@ -59,6 +62,7 @@ Route::middleware('static.auth')->group(function () {
     //login
     Route::post('/logout', [AdminController::class, 'logout']);
     Route::get('/dashboard', [DashboardController::class, 'list']);
+    Route::get('/contract-dashboard', [ContractDashboardController::class, 'index']);
 
     Route::prefix('job-form')->controller(JobFormController::class)->group(function () {
         Route::post('/pss-job-form', 'pssEnquirystore');
@@ -387,5 +391,8 @@ Route::prefix('employee')->group(function () {
         // Attendence Report
         Route::get('/attendance-report', [AttendanceReportController::class, 'employeeReport']);
         Route::get('/attendance-report/export', [AttendanceReportController::class, 'employeeReportExport']);
+
+        // Employee Monthly Report
+        Route::get('/monthly-report', [MonthlyReportController::class, 'employeeMonthlyReport']);
     });
 });

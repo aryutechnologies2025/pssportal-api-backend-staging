@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\LeadManagement;
+use App\Models\LeadManagementCategory;
 use Carbon\Carbon;
 use App\Models\LeadManagementNote;
 
@@ -49,6 +50,7 @@ class LeadManagementController extends Controller
         );
         $data = $query->latest()->get();
 
+        $lead_categories = LeadManagementCategory::where('is_deleted', '0') ->select('id', 'name')->get();
         $age = LeadManagement::where('is_deleted', '0')
             ->whereNotNull('age')
             ->pluck('age')
@@ -84,7 +86,8 @@ class LeadManagementController extends Controller
             'data'    => $data,
             'platforms' => $platforms,
             'age' => $age,
-            'cities' => $cities
+            'cities' => $cities,
+            'lead-category' => $lead_categories
         ]);
     }
 
