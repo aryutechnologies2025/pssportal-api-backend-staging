@@ -28,8 +28,12 @@ class Attendance extends Model
     public function details()
     {
         return $this->hasMany(AttendanceDetails::class, 'attendance_id')
-            ->with('contractEmployee');
+            ->with([
+                'contractEmployee',
+                'shiftDetails.shift' // nested relation
+            ]);
     }
+
 
 
     public function company()

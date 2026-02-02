@@ -22,7 +22,7 @@ class AttendanceDetails extends Model
         'shift_id' => 'array',
     ];
 
-     protected $appends = ['shifts'];
+    protected $appends = ['shifts'];
 
     public function attendance()
     {
@@ -45,5 +45,15 @@ class AttendanceDetails extends Model
         return CompanyShifts::whereIn('id', $this->shift_id)
             ->select('id', 'shift_name')
             ->get();
+    }
+
+
+    public function shiftDetails()
+    {
+        return $this->hasOne(
+            AttendanceShiftDetails::class,
+            'attendance_id',
+            'attendance_id'
+        )->whereColumn('employee_id', 'attendance_details.employee_id');
     }
 }
