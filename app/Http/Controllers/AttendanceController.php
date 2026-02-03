@@ -79,8 +79,8 @@ class AttendanceController extends Controller
                             'attendance_id' => $attendanceDetail->id,
                             'employee_id'   => $emp['employee_id'],
                             'shift_id'      => $shift['shift_id'],
-                            'start_time' => isset($shift['start_time']) ? (string) $shift['start_time'] : null,
-                            'end_time'   => isset($shift['end_time']) ? (string) $shift['end_time'] : null,
+                            'start_time' => isset($shift['start_time']) ? Carbon::parse($shift['start_time'])->format('H:i:s') : null,
+                            'end_time' => isset($shift['end_time']) ? Carbon::parse($shift['end_time'])->format('H:i:s') : null,
 
                         ]);
                     }
@@ -251,8 +251,8 @@ class AttendanceController extends Controller
                             'attendance_id' => $attendanceDetail->id,
                             'employee_id'   => $emp['employee_id'],
                             'shift_id'      => $shift['shift_id'],
-                            'start_time' => isset($shift['start_time']) ? (string) $shift['start_time'] : null,
-                            'end_time'   => isset($shift['end_time']) ? (string) $shift['end_time'] : null,
+                            'start_time' => isset($shift['start_time']) ? Carbon::parse($shift['start_time'])->format('H:i:s') : null,
+                            'end_time' => isset($shift['end_time']) ? Carbon::parse($shift['end_time'])->format('H:i:s') : null,
                         ]);
                     }
                 }
