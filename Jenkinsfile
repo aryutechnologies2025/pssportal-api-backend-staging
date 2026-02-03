@@ -6,6 +6,8 @@ pipeline {
     LIVE_CONTAINER = "staging_api"
     LIVE_PORT = "8001"
     DEPLOY_BRANCH = "main"
+    DOCKER_IMAGE = "pssportal-api"
+    DOCKER_NETWORK = "staging_default"
   }
 
   options {
@@ -15,60 +17,64 @@ pipeline {
 
   stages {
 
-    stage('Checkout (LOCKED TO MAIN)') {
-  steps {
-    sh '''
-      set -e
-
-      echo "Fixing host repo ownership..."
-      sudo chown -R jenkins:jenkins ${SERVER_PATH}
-      sudo chmod -R u+rwX ${SERVER_PATH}
-
-      cd ${SERVER_PATH}
-
-      echo "Fetching main branch..."
-      git fetch origin
-
-      echo "Resetting to origin/${DEPLOY_BRANCH}..."
-      git reset --hard origin/${DEPLOY_BRANCH}
-
-      echo "DEPLOYING COMMIT:"
-      git log --oneline -1
-    '''
-  }
-}
-
-
-    stage('Fix Permissions') {
+    stage('Checkout (MAIN)') {
       steps {
         sh '''
           set -e
-          docker exec ${LIVE_CONTAINER} sh -c "
-            mkdir -p /var/www/html/storage/logs
-            mkdir -p /var/www/html/bootstrap/cache
+          sudo chown -R jenkins:jenkins ${SERVER_PATH}
+          cd ${SERVER_PATH}
 
-            chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap
-            chmod -R 775 /var/www/html/storage /var/www/html/bootstrap
-          "
+          git fetch origin
+          git reset --hard origin/${DEPLOY_BRANCH}
+
+          echo "DEPLOYING COMMIT:"
+          git log --oneline -1
         '''
       }
     }
 
-    stage('Clear Cache') {
+    stage('Build Image') {
       steps {
         sh '''
           set -e
-          docker exec ${LIVE_CONTAINER} php artisan optimize:clear
+          cd ${SERVER_PATH}
+
+          COMMIT=$(git rev-parse --short HEAD)
+          echo "Building image: ${DOCKER_IMAGE}:staging-$COMMIT"
+
+          docker build -t ${DOCKER_IMAGE}:staging-$COMMIT .
+          docker tag ${DOCKER_IMAGE}:staging-$COMMIT ${DOCKER_IMAGE}:staging
         '''
       }
     }
 
-    stage('Health Check') {
+    stage('Deploy Container') {
       steps {
         sh '''
           set -e
-          sleep 5
-          curl -f http://localhost:${LIVE_PORT}/api/health
+
+          docker stop ${LIVE_CONTAINER} || true
+          docker rm ${LIVE_CONTAINER} || true
+
+          docker run -d \
+            --name ${LIVE_CONTAINER} \
+            --network ${DOCKER_NETWORK} \
+            -p 0.0.0.0:${LIVE_PORT}:80 \
+            --restart unless-stopped \
+            --env-file ${SERVER_PATH}/.env \
+            ${DOCKER_IMAGE}:staging
+        '''
+      }
+    }
+
+    stage('Health Check (Real Route)') {
+      steps {
+        sh '''
+          set -e
+          sleep 10
+
+          echo "Checking API route..."
+          curl -f http://127.0.0.1:${LIVE_PORT}/api/contract-dashboard
         '''
       }
     }
@@ -76,10 +82,10 @@ pipeline {
 
   post {
     success {
-      echo "✅ BACKEND DEPLOYED FROM MAIN"
+      echo "✅ DEPLOY SUCCESS — Docker image rebuilt and container replaced"
     }
     failure {
-      echo "❌ DEPLOY FAILED — CONTAINER NOT TOUCHED"
+      echo "❌ DEPLOY FAILED — Check logs, old container may still be running"
     }
   }
 }
