@@ -53,8 +53,8 @@ class CompanyController extends Controller
                 CompanyShifts::create([
                     'parent_id'         => $company->id,
                     'shift_name'        => $shift['shift_name'],
-                    'start_time'        => $shift['start_time'] ?? null,
-                    'end_time'          => $shift['end_time'],
+                    'start_time' => isset($shift['start_time']) ? (string) $shift['start_time'] : null,
+                    'end_time'   => isset($shift['end_time']) ? (string) $shift['end_time'] : null,
                     'created_by'        => $request->created_by,
                     'company_shift_id'  => $companyShiftId,
                 ]);
@@ -134,8 +134,8 @@ class CompanyController extends Controller
                 CompanyShifts::create([
                     'parent_id'        => $company->id,
                     'shift_name'       => $shift['shift_name'],
-                    'start_time'       => $shift['start_time'] ?? null,
-                    'end_time'         => $shift['end_time'],
+                    'start_time' => isset($shift['start_time']) ? (string) $shift['start_time'] : null,
+                    'end_time'   => isset($shift['end_time']) ? (string) $shift['end_time'] : null,
                     'created_by'       => $request->created_by,
                     'company_shift_id' => $companyShiftId,
                 ]);
