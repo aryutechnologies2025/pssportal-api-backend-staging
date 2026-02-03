@@ -188,6 +188,19 @@ class AttendanceController extends Controller
             'details.shiftDetails.shift'
         ])->findOrFail($id);
 
+        $attendance->details->each(function ($detail) {
+        if ($detail->shiftDetails) {
+        $detail->shiftDetails->each(function ($sd) {
+            $sd->start_time_display = $sd->start_time
+                ? Carbon::parse($sd->start_time)->format('h:i A')
+                : null;
+            $sd->end_time_display = $sd->end_time
+                ? Carbon::parse($sd->end_time)->format('h:i A')
+                : null;
+            });
+            }
+        });
+
         // ✅ Attendance counts
         $presentCount = $attendance->details
             ->where('attendance', '1')   // or 'present'
