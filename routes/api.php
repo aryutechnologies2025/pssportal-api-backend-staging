@@ -245,7 +245,7 @@ Route::middleware('static.auth')->group(function () {
             Route::post('/create', 'store');
             Route::get('/edit/{id}', 'edit_form');
             Route::post('/update/{id}', 'update');
-            Route::delete('/delete', 'delete');
+            Route::post('/delete', 'delete');
         });
     });
 
