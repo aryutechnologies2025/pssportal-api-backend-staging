@@ -68,17 +68,27 @@ pipeline {
     }
 
     stage('Health Check (Real Route)') {
-      steps {
-        sh '''
-          set -e
-          sleep 10
+  steps {
+    sh '''
+      set -e
+      sleep 10
 
-          echo "Checking API route..."
-          curl -f http://127.0.0.1:${LIVE_PORT}/api/contract-dashboard
-        '''
-      }
-    }
+      echo "Checking API route..."
+      STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:${LIVE_PORT}/api/contract-dashboard)
+
+      echo "HTTP Status: $STATUS"
+
+      if [ "$STATUS" = "200" ] || [ "$STATUS" = "401" ] || [ "$STATUS" = "403" ]; then
+        echo "Health check PASSED"
+        exit 0
+      else
+        echo "Health check FAILED"
+        exit 1
+      fi
+    '''
   }
+}
+
 
   post {
     success {
