@@ -62,11 +62,12 @@ class LeadCategoryController extends Controller
 
     public function delete(Request $request)
     {
-        $lead_category = LeadManagementCategory::find($request->record_id);
+        $record = $request->query('record_id');
+        $lead_category = LeadManagementCategory::find($record);
 
         if (!$lead_category) return response()->json([
             'status' => false,
-            'message' => 'Record not found'
+            'message' => 'Record not found' 
         ], 404);
 
         $lead_category->is_deleted = '1';
