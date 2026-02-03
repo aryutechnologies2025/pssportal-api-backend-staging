@@ -79,8 +79,9 @@ class AttendanceController extends Controller
                             'attendance_id' => $attendanceDetail->id,
                             'employee_id'   => $emp['employee_id'],
                             'shift_id'      => $shift['shift_id'],
-                            'start_time'    => $shift['start_time'],
-                            'end_time'      => $shift['end_time'],
+                            'start_time' => isset($shift['start_time']) ? (string) $shift['start_time'] : null,
+                            'end_time'   => isset($shift['end_time']) ? (string) $shift['end_time'] : null,
+
                         ]);
                     }
                 }
@@ -250,8 +251,8 @@ class AttendanceController extends Controller
                             'attendance_id' => $attendanceDetail->id,
                             'employee_id'   => $emp['employee_id'],
                             'shift_id'      => $shift['shift_id'],
-                            'start_time'    => $shift['start_time'],
-                            'end_time'      => $shift['end_time'],
+                            'start_time' => isset($shift['start_time']) ? (string) $shift['start_time'] : null,
+                            'end_time'   => isset($shift['end_time']) ? (string) $shift['end_time'] : null,
                         ]);
                     }
                 }
