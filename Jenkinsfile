@@ -38,26 +38,32 @@ pipeline {
     }
 
     stage('Deploy (ATOMIC CONTAINER REPLACE)') {
-      steps {
-        sh '''
-          set -e
-          echo "🚀 Deploying backend container..."
+  steps {
+    sh '''
+      set -e
+      echo "🚀 Deploying backend container..."
 
-          echo "Stopping old container if exists..."
-          docker stop ${CONTAINER_NAME} || true
-          docker rm ${CONTAINER_NAME} || true
+      echo "Stopping old container if exists..."
+      docker stop ${CONTAINER_NAME} || true
+      docker rm ${CONTAINER_NAME} || true
 
-          echo "Starting new container..."
-          docker run -d \
-            --name ${CONTAINER_NAME} \
-            --network ${DOCKER_NETWORK} \
-            -p 8001:80 \
-            ${DOCKER_IMAGE}:latest
+      echo "Starting new container..."
+      docker run -d \
+        --name ${CONTAINER_NAME} \
+        --network ${DOCKER_NETWORK} \
+        --env-file /var/www/staging/pssportal-api-backend/.env \
+        -p 8001:80 \
+        ${DOCKER_IMAGE}:latest
 
-          echo "✅ New container started"
-        '''
-      }
+      echo "Refreshing Laravel config cache..."
+      docker exec ${CONTAINER_NAME} php artisan config:clear
+      docker exec ${CONTAINER_NAME} php artisan config:cache
+
+      echo "✅ New container started"
+      '''
     }
+  }
+
 
     stage('Health Check') {
       steps {
