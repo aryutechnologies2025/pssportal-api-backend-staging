@@ -93,7 +93,9 @@ pipeline {
     stage('Cleanup') {
       steps {
         sh '''
-          docker image prune -af || true
+          docker container prune -f || true
+          docker volume prune -f || true
+
         '''
       }
     }
