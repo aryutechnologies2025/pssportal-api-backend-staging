@@ -34,8 +34,7 @@ class EmployeeController extends Controller
 
         $employees = Employee::where('is_deleted', 0)
             ->with(['role'])
-            ->select('full_name', 'phone_no', 'email', 'role_id', 'job_form_referal', 'company_id', 'id', 'status', 'jb_referal')
-
+            ->select('full_name', 'phone_no', 'email', 'role_id', 'job_form_referal', 'company_id', 'id', 'status', 'jb_referal', 'gen_employee_id')
             ->where('id', '!=', 1)
             ->when($request->filled('role_id'), function ($q) use ($request) {
                 $q->where('role_id', $request->role_id);
@@ -1088,19 +1087,58 @@ class EmployeeController extends Controller
         return response()->json(['success' => true, 'message' => 'Deleted successfully']);
     }
 
+    // public function jobreferalupdate(Request $request, $id)
+    // {
+    //     $emp = Employee::where('id', $id)
+    //         ->where('is_deleted', 0)
+    //         ->firstOrFail();
+
+    //     $column = $request->type === 'external'
+    //         ? 'jb_referal'
+    //         : 'job_form_referal';
+
+    //     $value = $request->type === 'external'
+    //         ? $request->job_form_ext_referal
+    //         : $request->job_form_referal;
+
+    //     $emp->update([$column => $value]);
+
+    //     return response()->json([
+    //         'success' => true,
+    //         'message' => 'Job form referral updated successfully'
+    //     ]);
+    // }
+
+
+
     public function jobreferalupdate(Request $request, $id)
     {
-        $emp = Employee::where('id', $id)->where('is_deleted', 0)->firstOrFail();
-        if ($request->type == 'external') {
-            $emp->jb_referal = $request->job_form_ext_referal;
-            $emp->save();
-        } else {
-            $emp->job_form_referal = $request->job_form_referal;
-            $emp->save();
+        $emp = Employee::where('id', $id)
+            ->where('is_deleted', 0)
+            ->firstOrFail();
+
+        // // Default reset
+        // $data = [
+        //     'job_form_referal' => 0,
+        //     'jb_referal'       => 0,
+        // ];
+
+        if ($request->reference_type === 'internal') {
+            $data['job_form_referal'] = (int) ($request->job_form_referal);
+             $emp->update($data);
         }
 
+        if ($request->reference_type === 'external') {
+            $data['jb_referal'] = (int) ($request->jb_referal);
+             $emp->update($data);
+        }
 
-        return response()->json(['success' => true, 'message' => 'Job form referal updated successfully']);
+       
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Job form referral updated successfully'
+        ]);
     }
 
 
