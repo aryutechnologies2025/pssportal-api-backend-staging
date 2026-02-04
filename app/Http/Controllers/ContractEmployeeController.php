@@ -201,7 +201,7 @@ class ContractEmployeeController extends Controller
                 $q->whereBetween('joining_date', [$from, $to]);
             })
             ->with(['notes', 'company'])
-            ->select('id', 'company_id', 'name', 'employee_id', 'phone_number', 'aadhar_number', 'joining_date', 'status', 'created_at','gender', 'date_of_birth')
+            ->select('id', 'company_id', 'name', 'employee_id', 'phone_number', 'aadhar_number', 'joining_date', 'status', 'created_at', 'gender', 'date_of_birth')
             ->orderByDesc('id')
             ->get();
 
@@ -521,13 +521,23 @@ class ContractEmployeeController extends Controller
             }
         }
 
-        if ($request->rejoing_details) {
-            $empRejoing = EmployeeRejoing::create([
+        if ($request->filled('rejoin_type') && $request->rejoin_type === '1') {
+
+            $rejoing_data = [
                 'parent_id' => $emp->id,
-                'status' => $request->rejoin_status,
-                'notes' => $request->rejoin_notes,
-            ]);
+                'company_id' => $request->company_id,
+                'boarding_point_id' => $request->boarding_point_id,
+                'address' => $request->address,
+                'joining_date' => $request->joining_date,
+                'employee_id' => $request->employee_id,
+                'rejoining_note' => $request->rejoining_note ?? null,
+                'rejoin_status' => $request->rejoin_status ?? 0,
+                'created_by' => $request->created_by
+            ];
+
+            $rejoingdetails = EmpRejoinLogs::create($rejoing_data);
         }
+
 
         return response()->json(['success' => true, 'message' => 'Updated successfully', 'data' => $emp]);
     }
@@ -653,13 +663,13 @@ class ContractEmployeeController extends Controller
         $handle = fopen($file->getRealPath(), 'r');
 
         $header = fgetcsv($handle);
-        
+
         // 🔧 Clean header: remove BOM, line breaks, and trim whitespace
-        $header = array_map(function($col) {
+        $header = array_map(function ($col) {
             $col = preg_replace('/[\x00-\x1F\x7F\xEF\xBB\xBF]/', '', $col); // Remove non-printable and BOM
             return trim(str_replace(["\r", "\n"], '', $col));
         }, $header);
-        
+
         $inserted = 0;
         $skipped  = 0;
         $errors   = [];
@@ -679,7 +689,7 @@ class ContractEmployeeController extends Controller
             if ($aadhar && strpos(strtolower($aadhar), 'e+') !== false) {
                 $aadhar = number_format((float)$aadhar, 0, '', '');
             }
-            
+
             if (empty($aadhar)) {
                 $skipped++;
                 continue;
@@ -710,7 +720,7 @@ class ContractEmployeeController extends Controller
                     $joining_date
                 );
             }
-            
+
             /* 🔹 Insert */
             ContractCanEmp::create([
                 'employee_id'    => $employee_id,
@@ -743,7 +753,7 @@ class ContractEmployeeController extends Controller
                 'created_by'     => $request->created_by,
                 'role_id'        => $request->role_id,
             ]);
-          
+
 
             $inserted++;
         }
@@ -876,7 +886,7 @@ class ContractEmployeeController extends Controller
 
     public function RejoinStatusList(Request $request)
     {
-        $rejoinstatus = EmpRejoinLogs::with(['employee','company','boardingPoint'])->where('parent_id', $request->employee_id)->get();
+        $rejoinstatus = EmpRejoinLogs::with(['employee', 'company', 'boardingPoint'])->where('parent_id', $request->employee_id)->get();
 
         return response()->json(['success' => true, 'data' => $rejoinstatus]);
     }
