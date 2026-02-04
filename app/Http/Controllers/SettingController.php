@@ -82,4 +82,13 @@ class SettingController extends Controller
             'data'    => Setting::first()
         ]);
     }
+
+
+    public function loginsetting()
+    {
+        return response()->json([
+            'success' => true,
+            'data' => Setting::select('site_logo', 'fav_icon')->first()
+        ]);
+    }
 }

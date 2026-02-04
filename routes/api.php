@@ -225,6 +225,7 @@ Route::middleware('static.auth')->group(function () {
 
     Route::get('settings', [SettingController::class, 'index']);
     Route::post('settings', [SettingController::class, 'store']);
+    Route::get('login-setting', [SettingController::class, 'loginsetting']);
     Route::get('activity', [ActivitiesController::class, 'activities']);
 
     Route::prefix('lead-management')->group(function () {

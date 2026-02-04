@@ -74,7 +74,6 @@ class ContractCanEmp extends Model
     public function rejoingstatus()
     {
         return $this->hasOne(EmpRejoinLogs::class, 'parent_id')
-            // ->where('status', 1)
             ->latestOfMany(); // gets latest by created_at
     }
 
@@ -83,5 +82,11 @@ class ContractCanEmp extends Model
     {
         return $this->hasMany(ContactDetail::class, 'parent_id')
             ->where('parent_type', 'contract_emp');
+    }
+
+    public function rejoingdetails()
+    {
+        return $this->hasMany(EmpRejoinLogs::class, 'parent_id')
+            ->with(['employee','company','boardingPoint']);
     }
 }
