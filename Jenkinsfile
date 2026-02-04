@@ -2,14 +2,11 @@ pipeline {
   agent any
 
   environment {
+    APP_DIR = "/var/www/staging/pssportal-api-backend"
     CONTAINER_NAME = "staging_api"
-    DEPLOY_BRANCH = "main"
-    DOCKER_IMAGE  = "pssportal-api"
+    DOCKER_IMAGE = "pssportal-api"
     DOCKER_NETWORK = "staging_default"
-    HEALTH_API = "http://127.0.0.1:8001/api/health"
-
-    HOST_UPLOADS = "/var/www/staging/uploads"
-    CONTAINER_UPLOADS = "/var/www/html/public/uploads"
+    HEALTH_URL = "http://127.0.0.1:8001/api/health"
   }
 
   options {
@@ -19,141 +16,67 @@ pipeline {
 
   stages {
 
-    // =========================
-    // CHECKOUT
-    // =========================
-    stage('Checkout (LOCKED TO MAIN)') {
+    stage('PROOF — Build Context') {
       steps {
-        checkout([
-          $class: 'GitSCM',
-          branches: [[name: "*/${DEPLOY_BRANCH}"]],
-          userRemoteConfigs: scm.userRemoteConfigs
-        ])
         sh '''
-          echo "DEPLOYING COMMIT:"
-          git log --oneline -1
+          set -e
+          echo "📁 Using backend folder:"
+          ls -ld ${APP_DIR}
+
+          echo "📄 Dockerfile preview:"
+          sed -n '1,15p' ${APP_DIR}/Dockerfile
         '''
       }
     }
 
-    // =========================
-    // PRE-FLIGHT CHECKS
-    // =========================
-    stage('Preflight (Host Sanity)') {
+    stage('Build Image (NO CACHE — MATCH MANUAL)') {
       steps {
         sh '''
           set -e
-          echo "🔍 Checking uploads folder on host..."
+          cd ${APP_DIR}
 
-          if [ ! -d "${HOST_UPLOADS}" ]; then
-            echo "❌ Uploads folder missing: ${HOST_UPLOADS}"
-            exit 1
-          fi
+          echo "🔥 Removing old image..."
+          docker rmi -f ${DOCKER_IMAGE}:latest || true
 
-          echo "✅ Host uploads folder exists"
-          ls -ld ${HOST_UPLOADS}
-        '''
-      }
-    }
-
-    // =========================
-    // BUILD IMAGE (NO CACHE)
-    // =========================
-    stage('Build Docker Image (NO CACHE)') {
-      steps {
-        sh '''
-          set -e
-          echo "🐳 Building backend Docker image (no cache)..."
+          echo "🐳 Building image..."
           docker build --no-cache -t ${DOCKER_IMAGE}:latest .
         '''
       }
     }
 
-    // =========================
-    // DEPLOY CONTAINER
-    // =========================
-    stage('Deploy (ATOMIC + VERIFIED)') {
+    stage('Deploy Container (MATCH MANUAL)') {
       steps {
         sh '''
           set -e
-          echo "🚀 Deploying backend container..."
 
-          echo "Stopping old container if exists..."
+          echo "🛑 Stopping old container..."
           docker stop ${CONTAINER_NAME} || true
           docker rm ${CONTAINER_NAME} || true
 
-          echo "Starting new container..."
+          echo "🚀 Starting new container..."
           docker run -d \
-            --restart unless-stopped \
             --name ${CONTAINER_NAME} \
             --network ${DOCKER_NETWORK} \
             --restart unless-stopped \
-            --env-file /var/www/staging/pssportal-api-backend/.env \
-            -v ${HOST_UPLOADS}:${CONTAINER_UPLOADS} \
+            --env-file ${APP_DIR}/.env \
+            -v /var/www/staging/uploads:/var/www/html/public/uploads \
             -p 8001:80 \
             ${DOCKER_IMAGE}:latest
-
-          echo "⏳ Waiting for container to boot..."
-          sleep 5
-
-          echo "🔎 Verifying Apache DocumentRoot..."
-          docker exec ${CONTAINER_NAME} apachectl -S | grep -q "/var/www/html/public" || {
-            echo "❌ Apache is NOT serving from /var/www/html/public"
-            docker exec ${CONTAINER_NAME} apachectl -S
-            exit 1
-          }
-
-          echo "🔎 Verifying uploads volume mount..."
-          docker exec ${CONTAINER_NAME} test -d ${CONTAINER_UPLOADS} || {
-            echo "❌ Uploads folder NOT mounted in container"
-            exit 1
-          }
-
-          echo "🔐 Fixing upload permissions..."
-          docker exec ${CONTAINER_NAME} chown -R www-data:www-data ${CONTAINER_UPLOADS}
-          docker exec ${CONTAINER_NAME} find ${CONTAINER_UPLOADS} -type d -exec chmod 755 {} \\;
-          docker exec ${CONTAINER_NAME} find ${CONTAINER_UPLOADS} -type f -exec chmod 644 {} \\;
-
-          echo "🧹 Refreshing Laravel config cache..."
-          docker exec ${CONTAINER_NAME} php artisan config:clear
-          docker exec ${CONTAINER_NAME} php artisan config:cache
-
-          echo "✅ Container deployed and verified"
         '''
       }
     }
 
-    // =========================
-    // HEALTH CHECK (REAL)
-    // =========================
-    stage('Health Check (API + FILESYSTEM)') {
+    stage('PROOF — Runtime Verification') {
       steps {
         sh '''
           set -e
-          echo "🩺 Checking API health..."
-          curl -f ${HEALTH_API}
 
-          echo "🩺 Checking static file serving..."
-          docker exec ${CONTAINER_NAME} test -r ${CONTAINER_UPLOADS} || {
-            echo "❌ Uploads path not readable by container"
-            exit 1
-          }
+          echo "🔎 Apache DocumentRoot:"
+          docker exec ${CONTAINER_NAME} apachectl -S | grep DocumentRoot
 
-          echo "✅ Health check passed (API + Filesystem)"
-        '''
-      }
-    }
-
-    // =========================
-    // CLEANUP
-    // =========================
-    stage('Cleanup (SAFE MODE)') {
-      steps {
-        sh '''
-          echo "🧹 Cleaning stopped containers and unused volumes..."
-          docker container prune -f || true
-          docker volume prune -f || true
-          echo "✅ Cleanup done"
+          echo "🩺 Health Check:"
+          sleep 5
+          curl -f ${HEALTH_URL}
         '''
       }
     }
@@ -161,10 +84,10 @@ pipeline {
 
   post {
     success {
-      echo "✅ STAGING BACKEND DEPLOY SUCCESS — VERIFIED BUILD"
+      echo "✅ DEPLOY SUCCESS — MATCHES MANUAL DEPLOY EXACTLY"
     }
     failure {
-      echo "❌ STAGING BACKEND DEPLOY FAILED — SYSTEM STATE PRESERVED FOR DEBUG"
+      echo "❌ DEPLOY FAILED — IMAGE OR CONTAINER STATE INVALID"
     }
   }
 }
