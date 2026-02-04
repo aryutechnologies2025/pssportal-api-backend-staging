@@ -49,11 +49,13 @@ pipeline {
 
       echo "Starting new container..."
       docker run -d \
-        --name ${CONTAINER_NAME} \
-        --network ${DOCKER_NETWORK} \
-        --env-file /var/www/staging/pssportal-api-backend/.env \
-        -p 8001:80 \
-        ${DOCKER_IMAGE}:latest
+      --name ${CONTAINER_NAME} \
+      --network ${DOCKER_NETWORK} \
+      --env-file /var/www/staging/pssportal-api-backend/.env \
+      -v /var/www/staging/uploads:/var/www/html/public/uploads \
+      -p 8001:80 \
+      ${DOCKER_IMAGE}:latest
+
 
       echo "Refreshing Laravel config cache..."
       docker exec ${CONTAINER_NAME} php artisan config:clear
