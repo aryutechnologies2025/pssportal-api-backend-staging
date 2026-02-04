@@ -6,7 +6,7 @@ pipeline {
     DEPLOY_BRANCH = "main"
     DOCKER_IMAGE  = "pssportal-api"
     DOCKER_NETWORK = "staging_default"
-    HEALTH_URL = "http://127.0.0.1:8001/health"
+    HEALTH_URL = "http://127.0.0.1:8001/api/health"
   }
 
   options {
@@ -51,7 +51,7 @@ pipeline {
           docker run -d \
             --name ${CONTAINER_NAME} \
             --network ${DOCKER_NETWORK} \
-            -p 8001:8001 \
+            -p 8001:80 \
             ${DOCKER_IMAGE}:latest
 
           echo "✅ New container started"
