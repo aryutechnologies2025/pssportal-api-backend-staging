@@ -303,7 +303,7 @@ class AttendanceController extends Controller
             ->where('is_deleted', 0)
             ->whereNotNull('joining_date')
             ->whereDate('joining_date', '<=', Carbon::today())
-            ->get(['id', 'name']);
+            ->get(['id', 'name', 'employee_id']);
 
         $shifts = CompanyShifts::where('parent_id', $company_id)
             ->where('is_deleted', 0)
