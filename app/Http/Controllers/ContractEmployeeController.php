@@ -242,7 +242,7 @@ class ContractEmployeeController extends Controller
 
     public function show($id)
     {
-        $emp = ContractCanEmp::with(['documents', 'boardingPoint', 'rejoingstatus', 'contacts'])->where('id', $id)
+        $emp = ContractCanEmp::with(['documents', 'boardingPoint', 'rejoingstatus', 'contacts', 'rejoingdetails'])->where('id', $id)
             ->where('is_deleted', 0)
             ->firstOrFail();
 
