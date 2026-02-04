@@ -2,10 +2,11 @@ pipeline {
   agent any
 
   environment {
-    CONTAINER_NAME = "staging_employee"
+    CONTAINER_NAME = "staging_api"
     DEPLOY_BRANCH = "main"
-    HEALTH_URL = "http://127.0.0.1:3002"
-    WEB_ROOT = "/usr/local/apache2/htdocs"
+    DOCKER_IMAGE  = "pssportal-api"
+    DOCKER_NETWORK = "staging_default"
+    HEALTH_URL = "http://127.0.0.1:8001/health"
   }
 
   options {
@@ -26,42 +27,34 @@ pipeline {
       }
     }
 
-    stage('Verify Static Frontend Files') {
+    stage('Build Docker Image') {
       steps {
         sh '''
           set -e
-          echo "🔍 Verifying static frontend files in repo root..."
-
-          test -f index.html || (echo "❌ index.html missing" && exit 1)
-          test -d assets || (echo "❌ assets/ folder missing" && exit 1)
-
-          echo "✅ Static frontend verified"
+          echo "🐳 Building backend Docker image..."
+          docker build -t ${DOCKER_IMAGE}:latest .
         '''
       }
     }
 
-    stage('Deploy (ATOMIC CONTAINER SYNC)') {
+    stage('Deploy (ATOMIC CONTAINER REPLACE)') {
       steps {
         sh '''
           set -e
-          echo "🚀 Deploying into container: ${CONTAINER_NAME}"
+          echo "🚀 Deploying backend container..."
 
-          docker exec ${CONTAINER_NAME} mkdir -p ${WEB_ROOT}_new
+          echo "Stopping old container if exists..."
+          docker stop ${CONTAINER_NAME} || true
+          docker rm ${CONTAINER_NAME} || true
 
-          echo "📦 Copying frontend files..."
-          docker cp index.html ${CONTAINER_NAME}:${WEB_ROOT}_new/
-          docker cp assets ${CONTAINER_NAME}:${WEB_ROOT}_new/
-          docker cp pss-favicon.jpeg ${CONTAINER_NAME}:${WEB_ROOT}_new/ || true
-          docker cp pss.jpg ${CONTAINER_NAME}:${WEB_ROOT}_new/ || true
-          docker cp pssAgenciesLogo.svg ${CONTAINER_NAME}:${WEB_ROOT}_new/ || true
-          docker cp vite.svg ${CONTAINER_NAME}:${WEB_ROOT}_new/ || true
+          echo "Starting new container..."
+          docker run -d \
+            --name ${CONTAINER_NAME} \
+            --network ${DOCKER_NETWORK} \
+            -p 8001:8001 \
+            ${DOCKER_IMAGE}:latest
 
-          echo "🔁 Atomic switch..."
-          docker exec ${CONTAINER_NAME} sh -c "
-            rm -rf ${WEB_ROOT}_old || true
-            mv ${WEB_ROOT} ${WEB_ROOT}_old || true
-            mv ${WEB_ROOT}_new ${WEB_ROOT}
-          "
+          echo "✅ New container started"
         '''
       }
     }
@@ -70,8 +63,21 @@ pipeline {
       steps {
         sh '''
           set -e
-          sleep 3
+          echo "🩺 Running health check..."
+          sleep 5
           curl -f ${HEALTH_URL}
+          echo "✅ Backend is healthy"
+        '''
+      }
+    }
+
+    stage('Cleanup (SAFE MODE)') {
+      steps {
+        sh '''
+          echo "🧹 Cleaning stopped containers and unused volumes..."
+          docker container prune -f || true
+          docker volume prune -f || true
+          echo "✅ Cleanup done (images preserved)"
         '''
       }
     }
@@ -79,10 +85,10 @@ pipeline {
 
   post {
     success {
-      echo "✅ STATIC FRONTEND DEPLOYED INTO DOCKER CONTAINER"
+      echo "✅ STAGING BACKEND DEPLOY SUCCESS"
     }
     failure {
-      echo "❌ DEPLOY FAILED — STATIC FILES OR CONTAINER ISSUE"
+      echo "❌ STAGING BACKEND DEPLOY FAILED — CHECK CONTAINER LOGS"
     }
   }
 }
