@@ -2,13 +2,12 @@ pipeline {
   agent any
 
   environment {
-    SERVER_PATH   = "/var/www/staging/pssportal-api-backend"
-    LIVE_CONTAINER = "staging_api"
-    LIVE_PORT      = "8001"
-    DEPLOY_BRANCH = "main"
-    DOCKER_IMAGE  = "pssportal-api"
-    DOCKER_NETWORK = "staging_default"
-    BACKUP_CONTAINER = "staging_api_backup"
+    APP_PATH = "/var/www/staging/pssportal-api-backend"
+    CONTAINER = "staging_api"
+    PORT = "8001"
+    BRANCH = "main"
+    IMAGE = "pssportal-api"
+    NETWORK = "staging_default"
   }
 
   options {
@@ -18,33 +17,24 @@ pipeline {
 
   stages {
 
-    stage('Preflight Validation') {
+    stage('Preflight') {
       steps {
         sh '''
           set -e
-
-          echo "Validating environment..."
-
-          test -d ${SERVER_PATH} || (echo "ERROR: App path missing" && exit 1)
-          test -f ${SERVER_PATH}/.env || (echo "ERROR: .env file missing" && exit 1)
-
-          docker info > /dev/null || (echo "ERROR: Docker not running" && exit 1)
-
-          echo "Preflight checks passed"
+          test -d ${APP_PATH}
+          test -f ${APP_PATH}/.env
+          docker info > /dev/null
         '''
       }
     }
 
-    stage('Checkout Code') {
+    stage('Checkout') {
       steps {
         sh '''
           set -e
-          cd ${SERVER_PATH}
-
+          cd ${APP_PATH}
           git fetch origin
-          git reset --hard origin/${DEPLOY_BRANCH}
-
-          echo "Deploying commit:"
+          git reset --hard origin/${BRANCH}
           git log --oneline -1
         '''
       }
@@ -54,82 +44,55 @@ pipeline {
       steps {
         sh '''
           set -e
-          cd ${SERVER_PATH}
-
-          COMMIT=$(git rev-parse --short HEAD)
-          export NEW_IMAGE=${DOCKER_IMAGE}:staging-$COMMIT
-
-          echo "Building image: $NEW_IMAGE"
-
-          docker build -t $NEW_IMAGE .
-          docker tag $NEW_IMAGE ${DOCKER_IMAGE}:staging
+          cd ${APP_PATH}
+          docker build -t ${IMAGE}:staging .
         '''
       }
     }
 
-    stage('Backup Running Container') {
+    stage('Deploy') {
       steps {
         sh '''
           set -e
 
-          if docker ps -q -f name=${LIVE_CONTAINER} > /dev/null; then
-            echo "Backing up running container..."
-            docker rm -f ${BACKUP_CONTAINER} || true
-            docker rename ${LIVE_CONTAINER} ${BACKUP_CONTAINER}
-          else
-            echo "No running container to backup"
-          fi
-        '''
-      }
-    }
-
-    stage('Deploy New Container') {
-      steps {
-        sh '''
-          set -e
-
-          echo "Starting new container..."
+          docker stop ${CONTAINER} || true
+          docker rm ${CONTAINER} || true
 
           docker run -d \
-            --name ${LIVE_CONTAINER} \
-            --network ${DOCKER_NETWORK} \
-            -p 0.0.0.0:${LIVE_PORT}:80 \
+            --name ${CONTAINER} \
+            --network ${NETWORK} \
+            -p ${PORT}:80 \
             --restart unless-stopped \
-            --env-file ${SERVER_PATH}/.env \
-            ${DOCKER_IMAGE}:staging
+            --env-file ${APP_PATH}/.env \
+            ${IMAGE}:staging
         '''
       }
     }
 
-    stage('Health Check (Backend Reachability)') {
+    stage('Health Check') {
       steps {
         sh '''
           set -e
 
-          echo "Checking backend availability on /"
-
-          for i in 1 2 3 4 5; do
-            STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:${LIVE_PORT}/ || true)
+          for i in 1 2 3; do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:${PORT}/ || true)
             echo "Attempt $i → HTTP $STATUS"
 
             if [ "$STATUS" = "200" ] || [ "$STATUS" = "301" ] || [ "$STATUS" = "302" ]; then
-              echo "Backend is reachable"
               exit 0
             fi
 
             sleep 5
           done
 
-          echo "Health check failed"
           exit 1
         '''
       }
     }
 
-    stage('Cleanup Old Images') {
+    stage('Cleanup') {
       steps {
         sh '''
-          echo "Cleaning unused images..."
           docker image prune -af || true
         '''
       }
@@ -138,31 +101,11 @@ pipeline {
   }
 
   post {
-
     success {
-      sh '''
-        echo "Deployment successful"
-
-        if docker ps -a -q -f name=${BACKUP_CONTAINER} > /dev/null; then
-          docker rm -f ${BACKUP_CONTAINER}
-        fi
-      '''
+      echo "✅ Staging deploy success"
     }
-
     failure {
-      sh '''
-        echo "Deployment failed — rolling back"
-
-        docker rm -f ${LIVE_CONTAINER} || true
-
-        if docker ps -a -q -f name=${BACKUP_CONTAINER} > /dev/null; then
-          docker rename ${BACKUP_CONTAINER} ${LIVE_CONTAINER}
-          docker start ${LIVE_CONTAINER}
-          echo "Rollback completed"
-        else
-          echo "No backup container found — manual intervention required"
-        fi
-      '''
+      echo "❌ Staging deploy failed — check container logs"
     }
   }
 }
