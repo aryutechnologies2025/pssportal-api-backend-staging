@@ -21,7 +21,6 @@ class ActivitiesController extends Controller
                     'employee_id' => $activity->employee->gen_employee_id ?? null,
                     'profile_image' => $activity->attendance->photo ?? null,
                     'location_details' => $activity->attendance->location_details ?? null,
-                    'employee_id' => $activity->employee->gen_employee_id ?? null,
                     'role_name'        => $activity->employee->role->role_name ?? null,
                     'created_at'       => $activity->created_at,
                 ];

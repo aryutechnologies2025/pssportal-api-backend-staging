@@ -36,7 +36,8 @@ class LeadManagement extends Model
         'created_by',
         'updated_by',
         'is_deleted',
-        'age'
+        'age',
+        'lead_category_id'
     ];
 
     public function notes()
@@ -52,4 +53,10 @@ class LeadManagement extends Model
                 DB::raw("DATE_FORMAT(created_at, '%Y-%m-%d %H:%i:%s') as created_at")
             )->orderBy('created_at', 'desc');
     }
+
+    public function category()
+    {
+        return $this->belongsTo(LeadManagementCategory::class, 'lead_category_id');
+    }
+
 }

@@ -37,6 +37,7 @@ use App\Http\Controllers\AnnouncementController;
 use App\Http\Controllers\ContractDashboardController;
 use App\Http\Controllers\LeadCategoryController;
 use App\Http\Controllers\MonthlyReportController;
+use App\Http\Controllers\RelievedController;
 
 /*
 |--------------------------------------------------------------------------
@@ -333,6 +334,16 @@ Route::middleware('static.auth')->group(function () {
             Route::post('/create', 'insert')->name('admin.eduction_insert');
             Route::post('/update/{id}', 'update')->name('admin.eduction_update');
             Route::delete('/delete', 'delete')->name('admin.eduction_delete');
+        });
+    });
+
+    // Relieved
+    Route::controller(RelievedController::class)->group(function () {
+        Route::prefix('relieved')->group(function () {
+            Route::get('/', 'list')->name('admin.relieved_list');
+            Route::get('/edit/{id}', 'edit_form')->name('admin.relieved_edit_form');
+            Route::post('/update/{id}', 'update')->name('admin.relieved_update');
+            Route::delete('/delete/{id}', 'delete')->name('admin.relieved_delete');
         });
     });
 

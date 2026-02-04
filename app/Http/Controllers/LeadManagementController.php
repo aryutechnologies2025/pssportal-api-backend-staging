@@ -15,7 +15,8 @@ class LeadManagementController extends Controller
      */
     public function index(Request $request)
     {
-        $query = LeadManagement::where('is_deleted', '0');
+        // $query = LeadManagement::where('is_deleted', '0');
+        $query = LeadManagement::where('is_deleted', '0')->with('category:id,name');
 
         // Optional filters
         // if ($request->filled('gender')) {
@@ -130,9 +131,9 @@ class LeadManagementController extends Controller
         $data['is_organic'] = $data['is_organic'];
         $data['created_time'] = date('Y-m-d H:i:s');
         $data['created_by'] = $request->created_by ?? null;
+        $data['lead_category_id'] = $request->lead_category_id ?? null;
 
         $lead = LeadManagement::create($data);
-
         return response()->json([
             'success' => true,
             'message' => 'Lead created successfully',
@@ -147,6 +148,7 @@ class LeadManagementController extends Controller
     {
         $lead = LeadManagement::where('id', $id)
             ->where('is_deleted', '0')
+            ->with('category:id,name')
             ->first();
 
         if (!$lead) {
@@ -190,6 +192,7 @@ class LeadManagementController extends Controller
             }
         }
         $data['age']          = $age;
+        $data['lead_category_id'] = $request->lead_category_id ?? $lead->lead_category_id;
         $data['updated_by'] = $request->updated_by ?? null;
 
         $lead->update($data);
@@ -368,6 +371,7 @@ class LeadManagementController extends Controller
                 'city'          => $data['city'] ?? null,
                 'state'         => $data['state'] ?? null,
                 'age'           => $age,
+                'lead_category_id' => $data['lead_category_id'] ?? null,
                 'lead_status'   => 'open',
                 'status'        => 1,
                 'is_deleted'    => '0',
