@@ -2,12 +2,10 @@ pipeline {
   agent any
 
   environment {
-    APP_PATH = "/var/www/staging/pssportal-api-backend"
-    CONTAINER = "staging_api"
-    PORT = "8001"
-    BRANCH = "main"
-    IMAGE = "pssportal-api"
-    NETWORK = "staging_default"
+    CONTAINER_NAME = "staging_employee"
+    DEPLOY_BRANCH = "main"
+    HEALTH_URL = "http://127.0.0.1:3002"
+    WEB_ROOT = "/usr/local/apache2/htdocs"
   }
 
   options {
@@ -17,54 +15,53 @@ pipeline {
 
   stages {
 
-    stage('Preflight') {
+    stage('Checkout (LOCKED TO MAIN)') {
+      steps {
+        checkout([
+          $class: 'GitSCM',
+          branches: [[name: "*/${DEPLOY_BRANCH}"]],
+          userRemoteConfigs: scm.userRemoteConfigs
+        ])
+        sh 'echo "DEPLOYING COMMIT:" && git log --oneline -1'
+      }
+    }
+
+    stage('Verify Static Frontend Files') {
       steps {
         sh '''
           set -e
-          test -d ${APP_PATH}
-          test -f ${APP_PATH}/.env
-          docker info > /dev/null
+          echo "🔍 Verifying static frontend files in repo root..."
+
+          test -f index.html || (echo "❌ index.html missing" && exit 1)
+          test -d assets || (echo "❌ assets/ folder missing" && exit 1)
+
+          echo "✅ Static frontend verified"
         '''
       }
     }
 
-    stage('Checkout') {
+    stage('Deploy (ATOMIC CONTAINER SYNC)') {
       steps {
         sh '''
           set -e
-          cd ${APP_PATH}
-          git fetch origin
-          git reset --hard origin/${BRANCH}
-          git log --oneline -1
-        '''
-      }
-    }
+          echo "🚀 Deploying into container: ${CONTAINER_NAME}"
 
-    stage('Build Image') {
-      steps {
-        sh '''
-          set -e
-          cd ${APP_PATH}
-          docker build -t ${IMAGE}:staging .
-        '''
-      }
-    }
+          docker exec ${CONTAINER_NAME} mkdir -p ${WEB_ROOT}_new
 
-    stage('Deploy') {
-      steps {
-        sh '''
-          set -e
+          echo "📦 Copying frontend files..."
+          docker cp index.html ${CONTAINER_NAME}:${WEB_ROOT}_new/
+          docker cp assets ${CONTAINER_NAME}:${WEB_ROOT}_new/
+          docker cp pss-favicon.jpeg ${CONTAINER_NAME}:${WEB_ROOT}_new/ || true
+          docker cp pss.jpg ${CONTAINER_NAME}:${WEB_ROOT}_new/ || true
+          docker cp pssAgenciesLogo.svg ${CONTAINER_NAME}:${WEB_ROOT}_new/ || true
+          docker cp vite.svg ${CONTAINER_NAME}:${WEB_ROOT}_new/ || true
 
-          docker stop ${CONTAINER} || true
-          docker rm ${CONTAINER} || true
-
-          docker run -d \
-            --name ${CONTAINER} \
-            --network ${NETWORK} \
-            -p ${PORT}:80 \
-            --restart unless-stopped \
-            --env-file ${APP_PATH}/.env \
-            ${IMAGE}:staging
+          echo "🔁 Atomic switch..."
+          docker exec ${CONTAINER_NAME} sh -c "
+            rm -rf ${WEB_ROOT}_old || true
+            mv ${WEB_ROOT} ${WEB_ROOT}_old || true
+            mv ${WEB_ROOT}_new ${WEB_ROOT}
+          "
         '''
       }
     }
@@ -73,41 +70,19 @@ pipeline {
       steps {
         sh '''
           set -e
-
-          for i in 1 2 3; do
-            STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:${PORT}/ || true)
-            echo "Attempt $i → HTTP $STATUS"
-
-            if [ "$STATUS" = "200" ] || [ "$STATUS" = "301" ] || [ "$STATUS" = "302" ]; then
-              exit 0
-            fi
-
-            sleep 5
-          done
-
-          exit 1
+          sleep 3
+          curl -f ${HEALTH_URL}
         '''
       }
     }
-
-    stage('Cleanup') {
-      steps {
-        sh '''
-          docker container prune -f || true
-          docker volume prune -f || true
-
-        '''
-      }
-    }
-
   }
 
   post {
     success {
-      echo "✅ Staging deploy success"
+      echo "✅ STATIC FRONTEND DEPLOYED INTO DOCKER CONTAINER"
     }
     failure {
-      echo "❌ Staging deploy failed — check container logs"
+      echo "❌ DEPLOY FAILED — STATIC FILES OR CONTAINER ISSUE"
     }
   }
 }
