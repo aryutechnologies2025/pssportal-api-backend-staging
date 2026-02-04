@@ -135,7 +135,7 @@ class ContactCandidateController extends Controller
                 $q->where('joining_status', $request->joining_status);
             })
             ->when($request->filled('education'), function ($q) use ($request) {
-                $q->where('education', $request->education);
+                $q->where('education_id', $request->education);
             })
             // Add company filter here
             ->when($request->filled('company_id'), function ($q) use ($request) {
