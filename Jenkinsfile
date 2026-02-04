@@ -84,6 +84,7 @@ pipeline {
 
           echo "Starting new container..."
           docker run -d \
+            --restart unless-stopped \
             --name ${CONTAINER_NAME} \
             --network ${DOCKER_NETWORK} \
             --restart unless-stopped \
