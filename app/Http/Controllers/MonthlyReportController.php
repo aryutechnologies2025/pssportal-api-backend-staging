@@ -59,11 +59,11 @@ class MonthlyReportController extends Controller
             ->get()
             ->groupBy('report_date');
 
-        // Attendance data keyed by date
         $attendance = PssEmployeeAttendance::where('employee_id', $employeeId)
             ->whereBetween('attendance_date', [$startDate->toDateString(), $endDate->toDateString()])
             ->get()
-            ->keyBy('attendance_date');
+            ->groupBy('attendance_date');
+
 
         $period = CarbonPeriod::create($startDate, $endDate);
         $data = [];
@@ -80,15 +80,31 @@ class MonthlyReportController extends Controller
                     ->toArray();
             }
 
-            $att = $attendance->get($dateString);
+            $attRows = $attendance->get($dateString, collect());
+
+            $loginTime = $attRows->where('reason', 'login')->min('attendance_time');
+            $logoutTime = $attRows->where('reason', 'logout')->max('attendance_time');
+            $totalHours = '00:00:00';
+
+            if ($loginTime && $logoutTime) {
+                $start = Carbon::parse($loginTime);
+                $end = Carbon::parse($logoutTime);
+
+                if ($end->lessThan($start)) {
+                    $end->addDay(); 
+                }
+
+                $totalSeconds = $start->diffInSeconds($end);
+                $totalHours = gmdate('H:i:s', $totalSeconds);
+            }
 
             $data[] = [
                 'date' => $dateString,
                 'day' => $date->format('l'),
                 'messages' => $messages,
-                'login_time' => $att->login_time ?? null,
-                'logout_time' => $att->logout_time ?? null,
-                'total_hours' => $att->total_hours ?? '00:00:00',
+                'login_time' => $loginTime,
+                'logout_time' => $logoutTime,
+                'total_hours' => $totalHours,
             ];
         }
 

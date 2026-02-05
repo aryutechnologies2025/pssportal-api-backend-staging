@@ -32,6 +32,7 @@ class ContractDashboardController extends Controller
             ->get()
             ->map(function ($item) {
                 return [
+                    'company_id' => $item->company_id,
                     'company_name' => optional($item->company)->company_name ?? 'Unknown',
                     'count' => $item->count,
                 ];
@@ -40,6 +41,7 @@ class ContractDashboardController extends Controller
         // 2. No of Candidate Joining (Count by Company and Reference Name)
         $joining = ContractCanEmp::select(
             'contract_can_emps.company_id',
+            'employees.id as reference_id',
             'employees.full_name as reference_name',
             DB::raw('COUNT(contract_can_emps.id) as count'),
             'companies.company_name'
@@ -53,10 +55,13 @@ class ContractDashboardController extends Controller
                     Carbon::parse($end_date)->endOfDay(),
                 ]);
             })
-            ->groupBy('contract_can_emps.company_id', 'employees.full_name', 'companies.company_name')
+            // ->groupBy('contract_can_emps.company_id', 'employees.full_name', 'companies.company_name')
+            ->groupBy('contract_can_emps.company_id', 'employees.id', 'employees.full_name', 'companies.company_name')
             ->get()
             ->map(function ($item) {
                 return [
+                    'company_id' => $item->company_id, 
+                    'reference_id' => $item->reference_id, 
                     'company_name' => $item->company_name,
                     'reference_name' => $item->reference_name ?? 'Self/Direct',
                     'count' => $item->count,
@@ -80,6 +85,7 @@ class ContractDashboardController extends Controller
             ->get()
             ->map(function ($item) {
                 return [
+                    'company_id' => $item->company_id,
                     'company_name' => optional($item->company)->company_name ?? 'Unknown',
                     'count' => $item->count,
                 ];
