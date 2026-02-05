@@ -2,7 +2,9 @@ pipeline {
   agent any
 
   environment {
+    // Runtime-only path (NOT for build)
     APP_DIR = "/var/www/staging/pssportal-api-backend"
+
     CONTAINER_NAME = "staging_api"
     DOCKER_IMAGE = "pssportal-api"
     DOCKER_NETWORK = "staging_default"
@@ -16,40 +18,40 @@ pipeline {
 
   stages {
 
-    stage('PROOF — Build Context') {
+    stage('PROOF — Jenkins Workspace') {
       steps {
         sh '''
           set -e
-          echo "📁 Using backend folder:"
-          ls -ld ${APP_DIR}
-
-          echo "📄 Dockerfile preview:"
-          sed -n '1,15p' ${APP_DIR}/Dockerfile
+          echo "📁 Jenkins Workspace:"
+          pwd
+          ls -la
+          echo "📄 Dockerfile (workspace):"
+          sed -n '1,15p' Dockerfile
         '''
       }
     }
 
-    stage('Build Image (NO CACHE — MATCH MANUAL)') {
+    stage('Build Image (FROM JENKINS WORKSPACE)') {
       steps {
-        sh '''
-          set -e
-          cd ${APP_DIR}
+        dir(env.WORKSPACE) {
+          sh '''
+            set -e
+            echo "🔥 Removing old image if exists..."
+            docker rmi -f ${DOCKER_IMAGE}:latest || true
 
-          echo "🔥 Removing old image..."
-          docker rmi -f ${DOCKER_IMAGE}:latest || true
-
-          echo "🐳 Building image..."
-          docker build --no-cache -t ${DOCKER_IMAGE}:latest .
-        '''
+            echo "🐳 Building Docker image from Jenkins workspace..."
+            docker build --no-cache -t ${DOCKER_IMAGE}:latest .
+          '''
+        }
       }
     }
 
-    stage('Deploy Container (MATCH MANUAL)') {
+    stage('Deploy Container (USE SERVER .env & uploads)') {
       steps {
         sh '''
           set -e
 
-          echo "🛑 Stopping old container..."
+          echo "🛑 Stopping old container if running..."
           docker stop ${CONTAINER_NAME} || true
           docker rm ${CONTAINER_NAME} || true
 
@@ -66,13 +68,13 @@ pipeline {
       }
     }
 
-    stage('PROOF — Runtime Verification') {
+    stage('PROOF — Files Inside Container (NO DB TOUCH)') {
       steps {
         sh '''
           set -e
 
-          echo "🔎 Apache DocumentRoot:"
-          docker exec ${CONTAINER_NAME} apachectl -S | grep DocumentRoot
+          echo "🔎 Checking migration files inside container:"
+          docker exec ${CONTAINER_NAME} ls database/migrations | tail -n 5
 
           echo "🩺 Health Check:"
           sleep 5
@@ -84,10 +86,10 @@ pipeline {
 
   post {
     success {
-      echo "✅ DEPLOY SUCCESS — MATCHES MANUAL DEPLOY EXACTLY"
+      echo "✅ DEPLOY SUCCESS — Image built from Jenkins workspace"
     }
     failure {
-      echo "❌ DEPLOY FAILED — IMAGE OR CONTAINER STATE INVALID"
+      echo "❌ DEPLOY FAILED — Check build context or container logs"
     }
   }
 }
