@@ -33,14 +33,14 @@ class EmployeeAuthController extends Controller
             ->where('privilege_for', 'employee')
             ->select('id', 'role_id', 'privilege_for')
             ->where('role_id', $employee->id) // employee id
-            ->where('is_deleted', '0')
+            ->where('is_deleted', 0)
             ->first();
         // 3️⃣ FALLBACK: Role-level permission
         if (!$permission) {
             $permission = Permission::with('modules')
                 ->where('privilege_for', 'role')
                 ->where('role_id', $employee->role_id) // role id
-                ->where('is_deleted', '0')
+                ->where('is_deleted', 0)
                 ->first();
         }
 
