@@ -171,7 +171,7 @@ class ContractEmployeeController extends Controller
             'joining_date' => $request->joining_date,
             'employee_id' => $request->employee_id,
             'rejoining_note' => $request->rejoining_note ?? null,
-            'rejoin_status' => $request->rejoin_status ?? 0,
+            'rejoin_status' => 0,
             'created_by' => $request->created_by
         ];
 

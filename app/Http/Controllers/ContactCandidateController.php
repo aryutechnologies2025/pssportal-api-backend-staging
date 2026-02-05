@@ -139,7 +139,7 @@ class ContactCandidateController extends Controller
             })
             // Add company filter here
             ->when($request->filled('company_id'), function ($q) use ($request) {
-            $q->where('company_id', $request->company_id);
+                $q->where('company_id', $request->company_id);
             })
             ->when($request->filled('from_date') && $request->filled('to_date'), function ($q) use ($request) {
                 $from = Carbon::parse($request->from_date)->startOfDay();
@@ -262,6 +262,7 @@ class ContactCandidateController extends Controller
        STEP 1: CHECK IN EMPLOYEE TABLE
        ============================ */
         $existingEmployee = ContractCanEmp::where('aadhar_number', $request->aadhar_number)
+            // ->where('id', '!=', $id)
             ->where('is_deleted', 0)
             ->first();
 
@@ -406,6 +407,106 @@ class ContactCandidateController extends Controller
                 // }
             }
         }
+
+        // if ($request->filled('joined_type') && $request->joined_type === 1) {
+
+        //     // dd('test');
+        //     // $data = $request->all();
+        //     // $emp = ContractCanEmp::create($data);
+
+        //     $newEmployeeId = null;
+        //     $company_id = $request->company_id;
+
+
+        //     $company = Company::where('id', $company_id)
+        //         ->select('company_emp_id', 'prefix')
+        //         ->first();
+        //     // $company =  Company::where('id', $company_id)->where('company_emp_id', 'automatic')->select('company_emp_id', 'prefix')->first();
+
+        //     if ($company && $company->company_emp_id === 'automatic') {
+        //         $dateOfJoining = Carbon::parse($request->date_of_joining)->format('Ym');
+        //         $prefix = $company->prefix . $dateOfJoining;
+        //         /**
+        //          * Get last employee_id for same date
+        //          * Example: pss20250112005
+        //          */
+        //         $lastEmployee = ContractCanEmp::where('employee_id', 'like', $prefix . '%')
+        //             ->orderBy('employee_id', 'desc')
+        //             ->first();
+
+        //         if ($lastEmployee) {
+        //             // Extract last 3 digits
+        //             $lastNumber = (int) substr($lastEmployee->employee_id, -3);
+        //             $nextNumber = str_pad($lastNumber + 1, 3, '0', STR_PAD_LEFT);
+        //         } else {
+        //             // First employee for this date
+        //             $nextNumber = '001';
+        //         }
+
+        //         $newEmployeeId = $prefix . $nextNumber;
+        //     }
+
+
+        //     $joining_data = [
+        //         'company_id' => $request->company_id,
+        //         'name' => $request->name,
+        //         'phone_number' => $request->phone_number,
+        //         'aadhar_number' => $request->aadhar_number,
+        //         'joining_date' => $request->joining_date,
+        //         'created_by' => $request->created_by
+        //     ];
+
+        //     $emp = ContractCanEmp::create(array_merge(
+        //         $joining_data,
+        //         [
+        //             'address'     => '-',
+        //             'employee_id' => $newEmployeeId
+        //         ]
+        //     ));
+        // }
+
+        if ($request->filled('joined_type') && (int)$request->joined_type === 1) {
+
+            $newEmployeeId = null;
+            $company_id = $request->company_id;
+
+            $company = Company::where('id', $company_id)
+                ->select('company_emp_id', 'prefix')
+                ->first();
+
+            if ($company && strtolower($company->company_emp_id) === 'automatic') {
+
+                $dateOfJoining = Carbon::parse($request->joining_date)->format('Ym');
+                $prefix = $company->prefix . $dateOfJoining;
+
+                $lastEmployee = ContractCanEmp::where('employee_id', 'like', $prefix . '%')
+                    ->orderBy('employee_id', 'desc')
+                    ->first();
+
+                if ($lastEmployee) {
+                    $lastNumber = (int) substr($lastEmployee->employee_id, -3);
+                    $nextNumber = str_pad($lastNumber + 1, 3, '0', STR_PAD_LEFT);
+                } else {
+                    $nextNumber = '001';
+                }
+
+                $newEmployeeId = $prefix . $nextNumber;
+            }
+
+            $emp = ContractCanEmp::create([
+                'company_id'   => $request->company_id,
+                'name'         => $request->name,
+                'phone_number' => $request->phone_number,
+                'aadhar_number' => $request->aadhar_number,
+                'joining_date' => $request->joining_date,
+                'created_by'   => $request->created_by,
+                'address'      => '-',
+                'employee_id'  => $newEmployeeId
+            ]);
+        }
+
+
+        //   dd('test1');
 
         return response()->json(['success' => true, 'message' => 'Updated successfully', 'data' => $emp]);
     }

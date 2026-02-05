@@ -54,7 +54,7 @@ class JobFormController extends Controller
 
         $reference = Employee::where('status', '1')->where('is_deleted', 0)
             ->where('id', '!=', 1)
-            ->where('job_form_referal', 1)
+            ->where('jb_referal', 1)
             ->select('full_name', 'id')
             ->get();
 
@@ -273,7 +273,7 @@ class JobFormController extends Controller
     {
         $reference = Employee::where('status', '1')->where('is_deleted', 0)
             ->where('id', '!=', 1)
-            ->where('job_form_referal', 1)
+            ->where('jb_referal', 1)
             ->select('full_name', 'id')
             ->get();
 
