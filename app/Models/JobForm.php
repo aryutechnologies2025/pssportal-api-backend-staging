@@ -10,6 +10,7 @@ class JobForm extends Model
     use HasFactory;
 
     protected $table = 'job_forms';
+    
 
     public function remarks()
     {

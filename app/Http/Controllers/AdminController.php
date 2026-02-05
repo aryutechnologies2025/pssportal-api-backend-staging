@@ -19,7 +19,7 @@ class AdminController extends Controller
         ]);
 
         // 2️⃣ Find user by username
-        $user = Employee::where('offical_email', $request->email)->first();
+        $user = Employee::where('offical_email', $request->email)->where('status', '1')->where('is_deleted', 0)->first();
 
 
         // ❌ User not found

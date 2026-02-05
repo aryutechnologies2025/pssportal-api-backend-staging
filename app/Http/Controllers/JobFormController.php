@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\JobForm;
+use App\Models\Employee;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
@@ -45,10 +46,16 @@ class JobFormController extends Controller
             ->orderBy('created_at', 'desc')
             ->paginate($limit, ['*'], 'page', $page);
 
-        $reference = JobForm::where('is_deleted', 0)->select('reference')
-            ->whereNotNull('reference')
-            ->distinct()
-            ->orderBy('reference')
+        // $reference = JobForm::where('is_deleted', 0)->select('reference')
+        //     ->whereNotNull('reference')
+        //     ->distinct()
+        //     ->orderBy('reference')
+        //     ->get();
+
+        $reference = Employee::where('status', '1')->where('is_deleted', 0)
+            ->where('id', '!=', 1)
+            ->where('job_form_referal', 1)
+            ->select('full_name', 'id')
             ->get();
 
         // District dropdown list ✅ NEW
@@ -259,6 +266,20 @@ class JobFormController extends Controller
         }, 200, [
             'Content-Type'        => 'text/csv',
             'Content-Disposition' => "attachment; filename=\"$fileName\"",
+        ]);
+    }
+
+    public function referenceList()
+    {
+        $reference = Employee::where('status', '1')->where('is_deleted', 0)
+            ->where('id', '!=', 1)
+            ->where('job_form_referal', 1)
+            ->select('full_name', 'id')
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => $reference
         ]);
     }
 }
