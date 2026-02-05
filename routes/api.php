@@ -36,6 +36,7 @@ use App\Http\Controllers\EductionController;
 use App\Http\Controllers\AnnouncementController;
 use App\Http\Controllers\ContractDashboardController;
 use App\Http\Controllers\LeadCategoryController;
+use App\Http\Controllers\LeadDashboardController;
 use App\Http\Controllers\MonthlyReportController;
 use App\Http\Controllers\RelievedController;
 
@@ -239,6 +240,10 @@ Route::middleware('static.auth')->group(function () {
         Route::post('/import', [LeadManagementController::class, 'import']);
         Route::post('/status-update/{id}', [LeadManagementController::class, 'statusUpdate']);
         Route::post('/status-list/{id}', [LeadManagementController::class, 'statusList']);
+
+        // Dashboard
+        Route::get('/dashboard', [LeadDashboardController::class, 'categoryWiseCount']);
+        Route::get('/status-wise', [LeadDashboardController::class, 'statusWiseCount']);
     });
 
 
