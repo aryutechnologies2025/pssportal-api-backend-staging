@@ -71,6 +71,7 @@ Route::middleware('static.auth')->group(function () {
         Route::delete('/delete/{id}', 'destroy');
         Route::get('/show/{id}', 'show');
         Route::get('/export', 'export');
+        Route::get('/reference-list', 'referenceList');
     });
 
     //remarks
