@@ -389,6 +389,7 @@ class ContactCandidateController extends Controller
             }
         }
 
+        
 
         if (is_array($request->notes_details)) {
             foreach ($request->notes_details as $note) {
